@@ -1,3 +1,5 @@
+mod set_1;
+
 fn main() {
-    println!("SGVsbG8gV29ybGQhCg==");
+    set_1::challenges();
 }
