@@ -1,5 +1,6 @@
 pub fn challenges() {
     challenge_1(); // https://cryptopals.com/sets/1/challenges/1
+    challenge_2(); // https://cryptopals.com/sets/1/challenges/2
 }
 
 // https://en.wikipedia.org/wiki/Hexadecimal
@@ -11,9 +12,49 @@ pub fn challenge_1() {
     );
 }
 
+// https://www.binaryhexconverter.com/hex-to-binary-converter
+// www.xor.pw
+pub fn challenge_2() {
+    assert_eq!(
+        hex_xor(
+            "1c0111001f010100061a024b53535009181c",
+            "686974207468652062756c6c277320657965"
+        ),
+        String::from("746865206b696420646f6e277420706c6179")
+    );
+}
+
+fn hex_xor(hex_1: &str, hex_2: &str) -> String {
+    let bits_1: Vec<bool> = hex_to_bits(hex_1);
+    let bits_2: Vec<bool> = hex_to_bits(hex_2);
+    let xored: Vec<bool> = bits_xor(&bits_1, &bits_2);
+
+    let mut bytes: Vec<u8> = Vec::new();
+    let chunks = xored.chunks_exact(4);
+    let _remainder: &[bool] = chunks.remainder();
+    assert_eq!(_remainder.len(), 0);
+    for chunk in chunks {
+        bytes.push(bits_to_u8(&chunk)); // Storing up to 4 bits
+    }
+
+    let mut hex: Vec<char> = Vec::new();
+    for byte in bytes {
+        hex.push(binary_to_hex(byte)); // Not a full byte, we chunked by 4 bits
+    }
+
+    hex.into_iter().collect()
+}
+
+fn bits_xor(bits_1: &[bool], bits_2: &[bool]) -> Vec<bool> {
+    let mut xored: Vec<bool> = Vec::new();
+    for (i, bit) in bits_1.iter().enumerate() {
+        xored.push(bit ^ bits_2[i]);
+    }
+    xored
+}
+
 fn hex_to_base64(hex_str: &str) -> String {
-    let hex_chars: Vec<char> = hex_str.chars().collect(); //4 bits = range from 0000-1111 = range from 0-F = range from 0-15
-    let bits: Vec<bool> = hex_vec_to_bit_vec(&hex_chars);
+    let bits: Vec<bool> = hex_to_bits(hex_str);
 
     let mut base64_result = String::new();
     let chunks = bits.chunks_exact(6);
@@ -48,6 +89,11 @@ fn hex_to_base64(hex_str: &str) -> String {
     }
 
     base64_result
+}
+
+fn hex_to_bits(hex: &str) -> Vec<bool> {
+    let hex_chars: Vec<char> = hex.chars().collect(); //4 bits = range from 0000-1111 = range from 0-F = range from 0-15
+    hex_vec_to_bit_vec(&hex_chars)
 }
 
 fn fill_6_bit_block(bits: &[bool]) -> [bool; 6] {
@@ -108,6 +154,44 @@ fn hex_to_binary(hex_char: char) -> u8 {
     }
 }
 
+fn binary_to_hex(binary: u8) -> char {
+    if binary == 0b0000u8 {
+        '0'
+    } else if binary == 0b0001u8 {
+        '1'
+    } else if binary == 0b0010u8 {
+        '2'
+    } else if binary == 0b0011u8 {
+        '3'
+    } else if binary == 0b0100u8 {
+        '4'
+    } else if binary == 0b0101u8 {
+        '5'
+    } else if binary == 0b0110u8 {
+        '6'
+    } else if binary == 0b0111u8 {
+        '7'
+    } else if binary == 0b1000u8 {
+        '8'
+    } else if binary == 0b1001u8 {
+        '9'
+    } else if binary == 0b1010u8 {
+        'a'
+    } else if binary == 0b1011u8 {
+        'b'
+    } else if binary == 0b1100u8 {
+        'c'
+    } else if binary == 0b1101u8 {
+        'd'
+    } else if binary == 0b1110u8 {
+        'e'
+    } else if binary == 0b1111u8 {
+        'f'
+    } else {
+        panic!("Received a u8 that I cannot handle!")
+    }
+}
+
 fn u8_to_bits(binary: u8) -> Vec<bool> {
     if binary == 0b0000u8 {
         vec![false, false, false, false]
@@ -143,6 +227,44 @@ fn u8_to_bits(binary: u8) -> Vec<bool> {
         vec![true, true, true, true]
     } else {
         panic!("Received a u8 that I cannot handle!")
+    }
+}
+
+fn bits_to_u8(bits: &[bool]) -> u8 {
+    if bits == [false, false, false, false] {
+        0b0000u8
+    } else if bits == [false, false, false, true] {
+        0b0001u8
+    } else if bits == [false, false, true, false] {
+        0b0010u8
+    } else if bits == [false, false, true, true] {
+        0b0011u8
+    } else if bits == [false, true, false, false] {
+        0b0100u8
+    } else if bits == [false, true, false, true] {
+        0b0101u8
+    } else if bits == [false, true, true, false] {
+        0b0110u8
+    } else if bits == [false, true, true, true] {
+        0b0111u8
+    } else if bits == [true, false, false, false] {
+        0b1000u8
+    } else if bits == [true, false, false, true] {
+        0b1001u8
+    } else if bits == [true, false, true, false] {
+        0b1010u8
+    } else if bits == [true, false, true, true] {
+        0b1011u8
+    } else if bits == [true, true, false, false] {
+        0b1100u8
+    } else if bits == [true, true, false, true] {
+        0b1101u8
+    } else if bits == [true, true, true, false] {
+        0b1110u8
+    } else if bits == [true, true, true, true] {
+        0b1111u8
+    } else {
+        panic!("Received a Vec<bool> that I cannot handle!")
     }
 }
 
