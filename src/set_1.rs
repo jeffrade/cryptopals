@@ -34,12 +34,14 @@ fn hex_xor(hex_1: &str, hex_2: &str) -> String {
     let _remainder: &[bool] = chunks.remainder();
     assert_eq!(_remainder.len(), 0);
     for chunk in chunks {
-        bytes.push(bits_to_u8(&chunk)); // Storing up to 4 bits
+        let mut padded_vec = vec![false, false, false, false];
+        padded_vec.extend(chunk);
+        bytes.push(bits_to_u8(&padded_vec));
     }
 
     let mut hex: Vec<char> = Vec::new();
     for byte in bytes {
-        hex.push(binary_to_hex(byte)); // Not a full byte, we chunked by 4 bits
+        hex.push(binary_to_hex(byte));
     }
 
     hex.into_iter().collect()
@@ -92,7 +94,7 @@ fn hex_to_base64(hex_str: &str) -> String {
 }
 
 fn hex_to_bits(hex: &str) -> Vec<bool> {
-    let hex_chars: Vec<char> = hex.chars().collect(); //4 bits = range from 0000-1111 = range from 0-F = range from 0-15
+    let hex_chars: Vec<char> = hex.chars().collect(); //8 bits = range from 00000000-00001111 = range from 0-F = range from 0-15
     hex_vec_to_bit_vec(&hex_chars)
 }
 
@@ -105,10 +107,10 @@ fn fill_6_bit_block(bits: &[bool]) -> [bool; 6] {
 }
 
 fn hex_vec_to_bit_vec(hex_chars: &[char]) -> Vec<bool> {
-    let mut bits: Vec<bool> = Vec::new(); //binary
+    let mut bits: Vec<bool> = Vec::new(); //bits
     for hex_char in hex_chars.iter() {
-        let four_bits: u8 = hex_to_binary(*hex_char);
-        let semi_octet_bits: Vec<bool> = u8_to_bits(four_bits);
+        let binary: u8 = hex_to_binary(*hex_char);
+        let semi_octet_bits: Vec<bool> = u8_to_bits(binary).split_off(4);
         for bit in semi_octet_bits.iter() {
             bits.push(*bit);
         }
@@ -118,74 +120,74 @@ fn hex_vec_to_bit_vec(hex_chars: &[char]) -> Vec<bool> {
 
 fn hex_to_binary(hex_char: char) -> u8 {
     if hex_char == '0' {
-        0b0000u8
+        0b00000000u8
     } else if hex_char == '1' {
-        0b0001u8
+        0b00000001u8
     } else if hex_char == '2' {
-        0b0010u8
+        0b00000010u8
     } else if hex_char == '3' {
-        0b0011u8
+        0b00000011u8
     } else if hex_char == '4' {
-        0b0100u8
+        0b00000100u8
     } else if hex_char == '5' {
-        0b0101u8
+        0b00000101u8
     } else if hex_char == '6' {
-        0b0110u8
+        0b00000110u8
     } else if hex_char == '7' {
-        0b0111u8
+        0b00000111u8
     } else if hex_char == '8' {
-        0b1000u8
+        0b00001000u8
     } else if hex_char == '9' {
-        0b1001u8
+        0b00001001u8
     } else if hex_char == 'a' {
-        0b1010u8
+        0b00001010u8
     } else if hex_char == 'b' {
-        0b1011u8
+        0b00001011u8
     } else if hex_char == 'c' {
-        0b1100u8
+        0b00001100u8
     } else if hex_char == 'd' {
-        0b1101u8
+        0b00001101u8
     } else if hex_char == 'e' {
-        0b1110u8
+        0b00001110u8
     } else if hex_char == 'f' {
-        0b1111u8
+        0b00001111u8
     } else {
         panic!("Received a char that I cannot handle!")
     }
 }
 
 fn binary_to_hex(binary: u8) -> char {
-    if binary == 0b0000u8 {
+    if binary == 0b00000000u8 {
         '0'
-    } else if binary == 0b0001u8 {
+    } else if binary == 0b00000001u8 {
         '1'
-    } else if binary == 0b0010u8 {
+    } else if binary == 0b00000010u8 {
         '2'
-    } else if binary == 0b0011u8 {
+    } else if binary == 0b00000011u8 {
         '3'
-    } else if binary == 0b0100u8 {
+    } else if binary == 0b00000100u8 {
         '4'
-    } else if binary == 0b0101u8 {
+    } else if binary == 0b00000101u8 {
         '5'
-    } else if binary == 0b0110u8 {
+    } else if binary == 0b00000110u8 {
         '6'
-    } else if binary == 0b0111u8 {
+    } else if binary == 0b00000111u8 {
         '7'
-    } else if binary == 0b1000u8 {
+    } else if binary == 0b00001000u8 {
         '8'
-    } else if binary == 0b1001u8 {
+    } else if binary == 0b00001001u8 {
         '9'
-    } else if binary == 0b1010u8 {
+    } else if binary == 0b00001010u8 {
         'a'
-    } else if binary == 0b1011u8 {
+    } else if binary == 0b00001011u8 {
         'b'
-    } else if binary == 0b1100u8 {
+    } else if binary == 0b00001100u8 {
         'c'
-    } else if binary == 0b1101u8 {
+    } else if binary == 0b00001101u8 {
         'd'
-    } else if binary == 0b1110u8 {
+    } else if binary == 0b00001110u8 {
         'e'
-    } else if binary == 0b1111u8 {
+    } else if binary == 0b00001111u8 {
         'f'
     } else {
         panic!("Received a u8 that I cannot handle!")
@@ -194,75 +196,77 @@ fn binary_to_hex(binary: u8) -> char {
 
 fn u8_to_bits(binary: u8) -> Vec<bool> {
     if binary == 0b0000u8 {
-        vec![false, false, false, false]
+        vec![false, false, false, false, false, false, false, false]
     } else if binary == 0b0001u8 {
-        vec![false, false, false, true]
+        vec![false, false, false, false, false, false, false, true]
     } else if binary == 0b0010u8 {
-        vec![false, false, true, false]
+        vec![false, false, false, false, false, false, true, false]
     } else if binary == 0b0011u8 {
-        vec![false, false, true, true]
+        vec![false, false, false, false, false, false, true, true]
     } else if binary == 0b0100u8 {
-        vec![false, true, false, false]
+        vec![false, false, false, false, false, true, false, false]
     } else if binary == 0b0101u8 {
-        vec![false, true, false, true]
+        vec![false, false, false, false, false, true, false, true]
     } else if binary == 0b0110u8 {
-        vec![false, true, true, false]
+        vec![false, false, false, false, false, true, true, false]
     } else if binary == 0b0111u8 {
-        vec![false, true, true, true]
+        vec![false, false, false, false, false, true, true, true]
     } else if binary == 0b1000u8 {
-        vec![true, false, false, false]
+        vec![false, false, false, false, true, false, false, false]
     } else if binary == 0b1001u8 {
-        vec![true, false, false, true]
+        vec![false, false, false, false, true, false, false, true]
     } else if binary == 0b1010u8 {
-        vec![true, false, true, false]
+        vec![false, false, false, false, true, false, true, false]
     } else if binary == 0b1011u8 {
-        vec![true, false, true, true]
+        vec![false, false, false, false, true, false, true, true]
     } else if binary == 0b1100u8 {
-        vec![true, true, false, false]
+        vec![false, false, false, false, true, true, false, false]
     } else if binary == 0b1101u8 {
-        vec![true, true, false, true]
+        vec![false, false, false, false, true, true, false, true]
     } else if binary == 0b1110u8 {
-        vec![true, true, true, false]
+        vec![false, false, false, false, true, true, true, false]
     } else if binary == 0b1111u8 {
-        vec![true, true, true, true]
+        vec![false, false, false, false, true, true, true, true]
+    } else if binary == 0b00010000u8 {
+        vec![false, false, false, true, false, false, false, false]
     } else {
         panic!("Received a u8 that I cannot handle!")
     }
 }
 
 fn bits_to_u8(bits: &[bool]) -> u8 {
-    if bits == [false, false, false, false] {
-        0b0000u8
-    } else if bits == [false, false, false, true] {
-        0b0001u8
-    } else if bits == [false, false, true, false] {
-        0b0010u8
-    } else if bits == [false, false, true, true] {
-        0b0011u8
-    } else if bits == [false, true, false, false] {
-        0b0100u8
-    } else if bits == [false, true, false, true] {
-        0b0101u8
-    } else if bits == [false, true, true, false] {
-        0b0110u8
-    } else if bits == [false, true, true, true] {
-        0b0111u8
-    } else if bits == [true, false, false, false] {
-        0b1000u8
-    } else if bits == [true, false, false, true] {
-        0b1001u8
-    } else if bits == [true, false, true, false] {
-        0b1010u8
-    } else if bits == [true, false, true, true] {
-        0b1011u8
-    } else if bits == [true, true, false, false] {
-        0b1100u8
-    } else if bits == [true, true, false, true] {
-        0b1101u8
-    } else if bits == [true, true, true, false] {
-        0b1110u8
-    } else if bits == [true, true, true, true] {
-        0b1111u8
+    if bits == [false, false, false, false, false, false, false, false] {
+        0b00000000u8
+    } else if bits == [false, false, false, false, false, false, false, true] {
+        0b00000001u8
+    } else if bits == [false, false, false, false, false, false, true, false] {
+        0b00000010u8
+    } else if bits == [false, false, false, false, false, false, true, true] {
+        0b00000011u8
+    } else if bits == [false, false, false, false, false, true, false, false] {
+        0b00000100u8
+    } else if bits == [false, false, false, false, false, true, false, true] {
+        0b00000101u8
+    } else if bits == [false, false, false, false, false, true, true, false] {
+        0b00000110u8
+    } else if bits == [false, false, false, false, false, true, true, true] {
+        0b00000111u8
+    } else if bits == [false, false, false, false, true, false, false, false] {
+        0b00001000u8
+    } else if bits == [false, false, false, false, true, false, false, true] {
+        0b00001001u8
+    } else if bits == [false, false, false, false, true, false, true, false] {
+        0b00001010u8
+    } else if bits == [false, false, false, false, true, false, true, true] {
+        0b00001011u8
+    } else if bits == [false, false, false, false, true, true, false, false] {
+        0b00001100u8
+    } else if bits == [false, false, false, false, true, true, false, true] {
+        0b00001101u8
+    } else if bits == [false, false, false, false, true, true, true, false] {
+        0b00001110u8
+    } else if bits == [false, false, false, false, true, true, true, true] {
+        0b00001111u8
     } else {
         panic!("Received a Vec<bool> that I cannot handle!")
     }
