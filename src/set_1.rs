@@ -47,10 +47,39 @@ fn hex_xor(hex_1: &str, hex_2: &str) -> String {
     hex.into_iter().collect()
 }
 
+// Refactor and DRY up this index padding chaos
 fn bits_xor(bits_1: &[bool], bits_2: &[bool]) -> Vec<bool> {
     let mut xored: Vec<bool> = Vec::new();
-    for (i, bit) in bits_1.iter().enumerate() {
-        xored.push(bit ^ bits_2[i]);
+    let bits_1_len = bits_1.len();
+    let bits_2_len = bits_2.len();
+
+    let eq_len = bits_1_len == bits_2_len;
+
+    if eq_len {
+        for (i, bit) in bits_1.iter().enumerate() {
+            xored.push(bit ^ bits_2[i]);
+        }
+    } else if bits_1_len < bits_2_len {
+        // Maybe use std::cmp::min(bits_1_len, bits_2_len) and check the sign
+        let mut bits_1_vec: Vec<bool> = Vec::new();
+        let to_pad = bits_2_len - bits_1_len + 1;
+        for _i in 1..to_pad {
+            bits_1_vec.push(false);
+        }
+        bits_1_vec.extend(bits_1);
+        for (i, bit) in bits_2.iter().enumerate() {
+            xored.push(bit ^ bits_1_vec[i]);
+        }
+    } else {
+        let mut bits_2_vec: Vec<bool> = Vec::new();
+        let to_pad = bits_1_len - bits_2_len + 1;
+        for _i in 1..to_pad {
+            bits_2_vec.push(false);
+        }
+        bits_2_vec.extend(bits_1);
+        for (i, bit) in bits_1.iter().enumerate() {
+            xored.push(bit ^ bits_2_vec[i]);
+        }
     }
     xored
 }
@@ -431,6 +460,27 @@ mod tests {
         assert_eq!(
             hex_to_base64("342679abc567d98ef54321ade979"),
             String::from("NCZ5q8Vn2Y71QyGt6Xk=")
+        );
+    }
+
+    #[test]
+    fn test_bits_xor() {
+        assert_eq!(vec![false], bits_xor(&[false], &[false]));
+        assert_eq!(vec![false], bits_xor(&[true], &[true]));
+        assert_eq!(vec![true], bits_xor(&[false], &[true]));
+
+        assert_eq!(
+            vec![false, false, false],
+            bits_xor(&[false, true, true], &[false, true, true])
+        );
+        assert_eq!(
+            vec![true, true, true],
+            bits_xor(&[false, true, true], &[true, false, false])
+        );
+
+        assert_eq!(
+            vec![true, true, true, false],
+            bits_xor(&[true, true, false], &[true, false, false, false])
         );
     }
 }
