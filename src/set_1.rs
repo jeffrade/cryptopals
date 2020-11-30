@@ -76,7 +76,7 @@ fn bits_xor(bits_1: &[bool], bits_2: &[bool]) -> Vec<bool> {
         for _i in 1..to_pad {
             bits_2_vec.push(false);
         }
-        bits_2_vec.extend(bits_1);
+        bits_2_vec.extend(bits_2);
         for (i, bit) in bits_1.iter().enumerate() {
             xored.push(bit ^ bits_2_vec[i]);
         }
@@ -224,81 +224,23 @@ fn binary_to_hex(binary: u8) -> char {
 }
 
 fn u8_to_bits(binary: u8) -> Vec<bool> {
-    if binary == 0b0000u8 {
-        vec![false, false, false, false, false, false, false, false]
-    } else if binary == 0b0001u8 {
-        vec![false, false, false, false, false, false, false, true]
-    } else if binary == 0b0010u8 {
-        vec![false, false, false, false, false, false, true, false]
-    } else if binary == 0b0011u8 {
-        vec![false, false, false, false, false, false, true, true]
-    } else if binary == 0b0100u8 {
-        vec![false, false, false, false, false, true, false, false]
-    } else if binary == 0b0101u8 {
-        vec![false, false, false, false, false, true, false, true]
-    } else if binary == 0b0110u8 {
-        vec![false, false, false, false, false, true, true, false]
-    } else if binary == 0b0111u8 {
-        vec![false, false, false, false, false, true, true, true]
-    } else if binary == 0b1000u8 {
-        vec![false, false, false, false, true, false, false, false]
-    } else if binary == 0b1001u8 {
-        vec![false, false, false, false, true, false, false, true]
-    } else if binary == 0b1010u8 {
-        vec![false, false, false, false, true, false, true, false]
-    } else if binary == 0b1011u8 {
-        vec![false, false, false, false, true, false, true, true]
-    } else if binary == 0b1100u8 {
-        vec![false, false, false, false, true, true, false, false]
-    } else if binary == 0b1101u8 {
-        vec![false, false, false, false, true, true, false, true]
-    } else if binary == 0b1110u8 {
-        vec![false, false, false, false, true, true, true, false]
-    } else if binary == 0b1111u8 {
-        vec![false, false, false, false, true, true, true, true]
-    } else if binary == 0b00010000u8 {
-        vec![false, false, false, true, false, false, false, false]
-    } else {
-        panic!("Received a u8 that I cannot handle!")
+    let mut result: Vec<bool> = Vec::new();
+    for i in 0..8 {
+        let bit: bool = ((binary >> i) % 2) == 0b00000001u8;
+        result.push(bit);
     }
+    result.reverse();
+    result
 }
 
 fn bits_to_u8(bits: &[bool]) -> u8 {
-    if bits == [false, false, false, false, false, false, false, false] {
-        0b00000000u8
-    } else if bits == [false, false, false, false, false, false, false, true] {
-        0b00000001u8
-    } else if bits == [false, false, false, false, false, false, true, false] {
-        0b00000010u8
-    } else if bits == [false, false, false, false, false, false, true, true] {
-        0b00000011u8
-    } else if bits == [false, false, false, false, false, true, false, false] {
-        0b00000100u8
-    } else if bits == [false, false, false, false, false, true, false, true] {
-        0b00000101u8
-    } else if bits == [false, false, false, false, false, true, true, false] {
-        0b00000110u8
-    } else if bits == [false, false, false, false, false, true, true, true] {
-        0b00000111u8
-    } else if bits == [false, false, false, false, true, false, false, false] {
-        0b00001000u8
-    } else if bits == [false, false, false, false, true, false, false, true] {
-        0b00001001u8
-    } else if bits == [false, false, false, false, true, false, true, false] {
-        0b00001010u8
-    } else if bits == [false, false, false, false, true, false, true, true] {
-        0b00001011u8
-    } else if bits == [false, false, false, false, true, true, false, false] {
-        0b00001100u8
-    } else if bits == [false, false, false, false, true, true, false, true] {
-        0b00001101u8
-    } else if bits == [false, false, false, false, true, true, true, false] {
-        0b00001110u8
-    } else if bits == [false, false, false, false, true, true, true, true] {
-        0b00001111u8
-    } else {
-        panic!("Received a Vec<bool> that I cannot handle!")
+    let mut result: u8 = 0;
+    for (i, b) in bits.iter().rev().enumerate() {
+        let to_add = if *b { 1 << i } else { 0 << i };
+        result += to_add;
     }
+
+    result
 }
 
 fn six_bits_to_b64(bit_vec: &[bool]) -> char {
@@ -481,6 +423,54 @@ mod tests {
         assert_eq!(
             vec![true, true, true, false],
             bits_xor(&[true, true, false], &[true, false, false, false])
+        );
+    }
+
+    #[test]
+    fn test_bits_to_u8() {
+        assert_eq!(0, bits_to_u8(&[false]));
+        assert_eq!(0, bits_to_u8(&[false, false]));
+        assert_eq!(1, bits_to_u8(&[true]));
+        assert_eq!(2, bits_to_u8(&[true, false]));
+        assert_eq!(1, bits_to_u8(&[false, true]));
+        assert_eq!(2, bits_to_u8(&[false, true, false]));
+        assert_eq!(6, bits_to_u8(&[true, true, false]));
+        assert_eq!(7, bits_to_u8(&[true, true, true]));
+        assert_eq!(
+            118,
+            bits_to_u8(&[false, true, true, true, false, true, true, false])
+        );
+        assert_eq!(
+            255,
+            bits_to_u8(&[true, true, true, true, true, true, true, true])
+        );
+    }
+
+    #[test]
+    fn test_u8_to_bits() {
+        assert_eq!(
+            u8_to_bits(0b00000000u8),
+            [false, false, false, false, false, false, false, false]
+        );
+        assert_eq!(
+            u8_to_bits(0b00000001u8),
+            [false, false, false, false, false, false, false, true]
+        );
+        assert_eq!(
+            u8_to_bits(0b00000010u8),
+            [false, false, false, false, false, false, true, false]
+        );
+        assert_eq!(
+            u8_to_bits(0b00010000u8),
+            [false, false, false, true, false, false, false, false]
+        );
+        assert_eq!(
+            u8_to_bits(0b00010001u8),
+            [false, false, false, true, false, false, false, true]
+        );
+        assert_eq!(
+            u8_to_bits(0b11111111u8),
+            [true, true, true, true, true, true, true, true]
         );
     }
 }
