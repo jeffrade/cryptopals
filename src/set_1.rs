@@ -1,6 +1,7 @@
 pub fn challenges() {
     challenge_1(); // https://cryptopals.com/sets/1/challenges/1
     challenge_2(); // https://cryptopals.com/sets/1/challenges/2
+    challenge_3(); // https://cryptopals.com/sets/1/challenges/3
 }
 
 // https://en.wikipedia.org/wiki/Hexadecimal
@@ -13,7 +14,7 @@ pub fn challenge_1() {
 }
 
 // https://www.binaryhexconverter.com/hex-to-binary-converter
-// www.xor.pw
+// http://www.xor.pw
 pub fn challenge_2() {
     assert_eq!(
         hex_xor(
@@ -24,27 +25,116 @@ pub fn challenge_2() {
     );
 }
 
+// https://en.wikipedia.org/wiki/Letter_frequency
+pub fn challenge_3() {
+    let cipher_text: &str = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
+    let cipher_bytes: Vec<u8> = hex_to_bytes(cipher_text);
+
+    let cipher_text_check: String = bytes_to_hex(&cipher_bytes);
+    assert_eq!(cipher_text, &cipher_text_check); // Sanity check
+
+    for i in 0..=255 {
+        let key_guess_bytes: Vec<u8> = vec![i; cipher_bytes.len()];
+        let mut key_guess_text: String = String::new();
+        for byte in &key_guess_bytes {
+            let hex_chars: Vec<char> = byte_to_hex(*byte);
+            assert_eq!(hex_chars.len(), 2);
+            key_guess_text.push(*hex_chars.first().unwrap());
+            key_guess_text.push(*hex_chars.last().unwrap());
+        }
+
+        let xored: Vec<u8> = bytes_xor(&cipher_bytes, &key_guess_bytes);
+        let xored_check: String = hex_xor(cipher_text, &key_guess_text);
+        assert_eq!(&xored, &hex_to_bytes(&xored_check)); // Sanity check
+
+        let plaintext = String::from_utf8_lossy(&xored);
+        let percentages: Vec<f32> = char_analysis_counts(&plaintext);
+        let e_per: f32 = percentages[0];
+        let t_per: f32 = percentages[1];
+        let a_per: f32 = percentages[2];
+        let o_per: f32 = percentages[3];
+        let i_per: f32 = percentages[4];
+        let space_per: f32 = percentages[12];
+        // TODO Let's just do something simple for now to only show most likely plaintexts
+        if (e_per > 0.13 || t_per > 0.09 || a_per > 0.08 || o_per > 0.07 || i_per > 0.08)
+            && space_per > 0.0
+        {
+            println!("key {} produced plaintext \"{:?}\"", i, &plaintext);
+        }
+    }
+}
+
+fn char_analysis_counts(plaintext: &str) -> Vec<f32> {
+    const FREQ_CHARS: [char; 13] = [
+        'E', 'T', 'A', 'O', 'I', 'N', 'S', 'H', 'R', 'D', 'L', 'U', ' ',
+    ];
+    let mut percents: Vec<f32> = Vec::new();
+    let str_len = plaintext.chars().count();
+    let plaintext_up: String = plaintext.to_uppercase();
+    for ch in FREQ_CHARS.iter() {
+        let ch_count = match plaintext_up.find(|c: char| &c == ch) {
+            Some(count) => count,
+            None => 0,
+        };
+        percents.push(ch_count as f32 / str_len as f32);
+    }
+
+    percents
+}
+
 fn hex_xor(hex_1: &str, hex_2: &str) -> String {
     let bits_1: Vec<bool> = hex_to_bits(hex_1);
     let bits_2: Vec<bool> = hex_to_bits(hex_2);
     let xored: Vec<bool> = bits_xor(&bits_1, &bits_2);
+    bits_to_hex(&xored)
+}
 
-    let mut bytes: Vec<u8> = Vec::new();
-    let chunks = xored.chunks_exact(4);
+fn bits_to_hex(bits: &[bool]) -> String {
+    //TODO Add tests for different lengths
+    assert_eq!(bits.len() % 4, 0);
+    let mut semi_octets: Vec<u8> = Vec::new();
+    let chunks = bits.chunks_exact(4);
     let _remainder: &[bool] = chunks.remainder();
     assert_eq!(_remainder.len(), 0);
     for chunk in chunks {
         let mut padded_vec = vec![false, false, false, false];
         padded_vec.extend(chunk);
-        bytes.push(bits_to_u8(&padded_vec));
+        semi_octets.push(bits_to_u8(&padded_vec));
     }
 
     let mut hex: Vec<char> = Vec::new();
-    for byte in bytes {
-        hex.push(binary_to_hex(byte));
+    for semi_octet in semi_octets {
+        hex.push(semi_octet_to_hex(semi_octet));
     }
 
     hex.into_iter().collect()
+}
+
+fn bytes_to_hex(bytes: &[u8]) -> String {
+    let mut hex_str = String::new();
+    for byte in bytes {
+        let hex_chars: Vec<char> = byte_to_hex(*byte);
+        for hex in hex_chars {
+            hex_str.push(hex);
+        }
+    }
+    hex_str
+}
+
+fn byte_to_hex(byte: u8) -> Vec<char> {
+    vec![
+        semi_octet_to_hex(byte >> 4),
+        semi_octet_to_hex(0b00001111u8 & byte),
+    ]
+}
+
+fn bytes_xor(bytes_1: &[u8], bytes_2: &[u8]) -> Vec<u8> {
+    let mut result: Vec<u8> = Vec::new();
+    assert_eq!(bytes_1.len(), bytes_2.len());
+    for (i, byte) in bytes_1.iter().enumerate() {
+        result.push(byte ^ bytes_2[i]);
+    }
+    result
 }
 
 // Refactor and DRY up this index padding chaos
@@ -115,15 +205,40 @@ fn hex_to_base64(hex_str: &str) -> String {
         } else if empty_bit_length == 16 {
             base64_result.push('=');
         } else {
-            panic!("Wrong length of bits during conversion!");
+            panic!("Wrong length of bits during conversion: {:?}", bits_length);
         }
     }
 
     base64_result
 }
 
+//TODO test me
+fn hex_to_bytes(hex: &str) -> Vec<u8> {
+    let mut bytes: Vec<u8> = Vec::new();
+    let hex_chars: Vec<char> = hex.chars().collect();
+    let hex_bytes = hex_chars.chunks_exact(2);
+    let remainder: &[char] = hex_bytes.remainder();
+
+    assert_eq!(hex.len() % 2, 0); //TODO handle odd number of chars with '0' padding prefix
+    assert_eq!(remainder.is_empty(), true); //TODO handle odd number of chars with '0' padding prefix
+
+    for hex_byte in hex_bytes {
+        bytes.push(hex_to_byte(&hex_byte));
+    }
+
+    bytes
+}
+
+//TODO test me
+fn hex_to_byte(hex_chars: &[char]) -> u8 {
+    assert_eq!(hex_chars.len(), 2);
+    let first: char = hex_chars[0];
+    let last: char = hex_chars[1];
+    (hex_to_semi_octet(first) << 4) + hex_to_semi_octet(last)
+}
+
 fn hex_to_bits(hex: &str) -> Vec<bool> {
-    let hex_chars: Vec<char> = hex.chars().collect(); //8 bits = range from 00000000-00001111 = range from 0-F = range from 0-15
+    let hex_chars: Vec<char> = hex.chars().collect();
     hex_vec_to_bit_vec(&hex_chars)
 }
 
@@ -136,9 +251,9 @@ fn fill_6_bit_block(bits: &[bool]) -> [bool; 6] {
 }
 
 fn hex_vec_to_bit_vec(hex_chars: &[char]) -> Vec<bool> {
-    let mut bits: Vec<bool> = Vec::new(); //bits
+    let mut bits: Vec<bool> = Vec::new();
     for hex_char in hex_chars.iter() {
-        let binary: u8 = hex_to_binary(*hex_char);
+        let binary: u8 = hex_to_semi_octet(*hex_char);
         let semi_octet_bits: Vec<bool> = u8_to_bits(binary).split_off(4);
         for bit in semi_octet_bits.iter() {
             bits.push(*bit);
@@ -147,7 +262,7 @@ fn hex_vec_to_bit_vec(hex_chars: &[char]) -> Vec<bool> {
     bits
 }
 
-fn hex_to_binary(hex_char: char) -> u8 {
+fn hex_to_semi_octet(hex_char: char) -> u8 {
     if hex_char == '0' {
         0b00000000u8
     } else if hex_char == '1' {
@@ -181,11 +296,11 @@ fn hex_to_binary(hex_char: char) -> u8 {
     } else if hex_char == 'f' {
         0b00001111u8
     } else {
-        panic!("Received a char that I cannot handle!")
+        panic!("Received a char that I cannot handle: {:?}", hex_char)
     }
 }
 
-fn binary_to_hex(binary: u8) -> char {
+fn semi_octet_to_hex(binary: u8) -> char {
     if binary == 0b00000000u8 {
         '0'
     } else if binary == 0b00000001u8 {
@@ -219,7 +334,7 @@ fn binary_to_hex(binary: u8) -> char {
     } else if binary == 0b00001111u8 {
         'f'
     } else {
-        panic!("Received a u8 that I cannot handle!")
+        panic!("Received a u8 that I cannot handle: {:?}", binary)
     }
 }
 
@@ -373,13 +488,41 @@ fn six_bits_to_b64(bit_vec: &[bool]) -> char {
     } else if bit_vec == [true, true, true, true, true, true] {
         '/'
     } else {
-        panic!("Received a vec that I cannot handle!")
+        panic!("Received a vec that I cannot handle: {:?}", bit_vec)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_bytes_xor() {
+        assert_eq!(bytes_xor(&[1], &[0]), vec![1]);
+        assert_eq!(bytes_xor(&[1], &[1]), vec![0]);
+        assert_eq!(bytes_xor(&[21, 175], &[110, 43]), vec![123, 132]);
+    }
+
+    #[test]
+    fn test_byte_to_hex() {
+        assert_eq!(byte_to_hex(0), ['0', '0']);
+        assert_eq!(byte_to_hex(9), ['0', '9']);
+        assert_eq!(byte_to_hex(10), ['0', 'a']);
+        assert_eq!(byte_to_hex(15), ['0', 'f']);
+        assert_eq!(byte_to_hex(16), ['1', '0']);
+        assert_eq!(byte_to_hex(255), ['f', 'f']);
+    }
+
+    #[test]
+    fn test_bytes_to_hex() {
+        assert_eq!(bytes_to_hex(&[10]), "0a");
+        assert_eq!(bytes_to_hex(&[0]), "00");
+        assert_eq!(bytes_to_hex(&[255, 15, 0, 100, 9, 1]), "ff0f00640901");
+        assert_eq!(
+            bytes_to_hex(&[0b10101010u8, 0b11111111u8, 0b00000000u8, 0b11111111u8]),
+            "aaff00ff"
+        );
+    }
 
     #[test]
     fn test_hex_to_base64_without_padding() {

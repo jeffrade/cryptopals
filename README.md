@@ -21,7 +21,7 @@ _So go ahead and make that happen. You'll need to use this code for the rest of 
 
 _Cryptopals Rule: Always operate on raw bytes, never on encoded strings. Only use hex and base64 for pretty-printing._
 
-### Challenge 2:  Fixed XOR
+### Challenge 2: Fixed XOR
 
 _Write a function that takes two equal-length buffers and produces their XOR combination._
 
@@ -39,3 +39,16 @@ _... should produce:_
 ```
 746865206b696420646f6e277420706c6179
 ```
+
+### Challenge 3: Single-byte XOR cipher
+
+_The hex encoded string:_
+```
+1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736
+```
+
+_... has been XOR'd against a single character. Find the key, decrypt the message._
+
+_You can do this by hand. But don't: write code to do it for you._
+
+_How? Devise some method for "scoring" a piece of English plaintext. Character frequency is a good metric. Evaluate each output and choose the one with the best score._
