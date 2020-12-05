@@ -527,15 +527,31 @@ mod tests {
     fn test_hex_to_bytes() {
         assert_eq!(hex_to_bytes("0000"), vec![0b00000000u8, 0b00000000u8]);
         assert_eq!(hex_to_bytes("ff00"), vec![0b11111111u8, 0b00000000u8]);
-        assert_eq!(hex_to_bytes("10ff00"), vec![0b00010000u8, 0b11111111u8, 0b00000000u8]);
+        assert_eq!(
+            hex_to_bytes("10ff00"),
+            vec![0b00010000u8, 0b11111111u8, 0b00000000u8]
+        );
     }
 
     #[test]
     fn test_bits_to_hex() {
         assert_eq!(bits_to_hex(&[false, false, false, false]), "0");
-        assert_eq!(bits_to_hex(&[false, false, false, false, false, false, false, false]), "00");
-        assert_eq!(bits_to_hex(&[true, true, true, true, false, false, false, false, false, false, false, false]), "f00");
-        assert_eq!(bits_to_hex(&[true, false, true, true, true, false, true, false, false, true, true, true]), "ba7");
+        assert_eq!(
+            bits_to_hex(&[false, false, false, false, false, false, false, false]),
+            "00"
+        );
+        assert_eq!(
+            bits_to_hex(&[
+                true, true, true, true, false, false, false, false, false, false, false, false
+            ]),
+            "f00"
+        );
+        assert_eq!(
+            bits_to_hex(&[
+                true, false, true, true, true, false, true, false, false, true, true, true
+            ]),
+            "ba7"
+        );
     }
 
     #[test]
