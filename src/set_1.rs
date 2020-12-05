@@ -28,8 +28,11 @@ pub fn challenge_2() {
 // https://en.wikipedia.org/wiki/Letter_frequency
 pub fn challenge_3() {
     let cipher_text: &str = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
-    let cipher_bytes: Vec<u8> = hex_to_bytes(cipher_text);
+    find_single_byte_key(cipher_text);
+}
 
+fn find_single_byte_key(cipher_text: &str) {
+    let cipher_bytes: Vec<u8> = hex_to_bytes(cipher_text);
     let cipher_text_check: String = bytes_to_hex(&cipher_bytes);
     assert_eq!(cipher_text, &cipher_text_check); // Sanity check
 
