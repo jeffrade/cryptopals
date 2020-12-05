@@ -90,7 +90,6 @@ fn hex_xor(hex_1: &str, hex_2: &str) -> String {
 }
 
 fn bits_to_hex(bits: &[bool]) -> String {
-    //TODO Add tests for different lengths
     assert_eq!(bits.len() % 4, 0);
     let mut semi_octets: Vec<u8> = Vec::new();
     let chunks = bits.chunks_exact(4);
@@ -212,7 +211,6 @@ fn hex_to_base64(hex_str: &str) -> String {
     base64_result
 }
 
-//TODO test me
 fn hex_to_bytes(hex: &str) -> Vec<u8> {
     let mut bytes: Vec<u8> = Vec::new();
     let hex_chars: Vec<char> = hex.chars().collect();
@@ -229,7 +227,6 @@ fn hex_to_bytes(hex: &str) -> Vec<u8> {
     bytes
 }
 
-//TODO test me
 fn hex_to_byte(hex_chars: &[char]) -> u8 {
     assert_eq!(hex_chars.len(), 2);
     let first: char = hex_chars[0];
@@ -495,6 +492,28 @@ fn six_bits_to_b64(bit_vec: &[bool]) -> char {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_hex_to_byte() {
+        assert_eq!(hex_to_byte(&['0', '0']), 0b00000000u8);
+        assert_eq!(hex_to_byte(&['f', 'f']), 0b11111111u8);
+        assert_eq!(hex_to_byte(&['1', '0']), 0b00010000u8);
+    }
+
+    #[test]
+    fn test_hex_to_bytes() {
+        assert_eq!(hex_to_bytes("0000"), vec![0b00000000u8, 0b00000000u8]);
+        assert_eq!(hex_to_bytes("ff00"), vec![0b11111111u8, 0b00000000u8]);
+        assert_eq!(hex_to_bytes("10ff00"), vec![0b00010000u8, 0b11111111u8, 0b00000000u8]);
+    }
+
+    #[test]
+    fn test_bits_to_hex() {
+        assert_eq!(bits_to_hex(&[false, false, false, false]), "0");
+        assert_eq!(bits_to_hex(&[false, false, false, false, false, false, false, false]), "00");
+        assert_eq!(bits_to_hex(&[true, true, true, true, false, false, false, false, false, false, false, false]), "f00");
+        assert_eq!(bits_to_hex(&[true, false, true, true, true, false, true, false, false, true, true, true]), "ba7");
+    }
 
     #[test]
     fn test_bytes_xor() {
