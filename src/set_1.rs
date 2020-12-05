@@ -1,7 +1,11 @@
+use std::fs::File;
+use std::io::{prelude::*, BufReader};
+
 pub fn challenges() {
     challenge_1(); // https://cryptopals.com/sets/1/challenges/1
     challenge_2(); // https://cryptopals.com/sets/1/challenges/2
     challenge_3(); // https://cryptopals.com/sets/1/challenges/3
+    challenge_4(); // https://cryptopals.com/sets/1/challenges/4
 }
 
 // https://en.wikipedia.org/wiki/Hexadecimal
@@ -28,10 +32,20 @@ pub fn challenge_2() {
 // https://en.wikipedia.org/wiki/Letter_frequency
 pub fn challenge_3() {
     let cipher_text: &str = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
-    find_single_byte_key(cipher_text);
+    find_single_byte_key(cipher_text, true);
 }
 
-fn find_single_byte_key(cipher_text: &str) {
+// "Now that the party is jumping"
+pub fn challenge_4() {
+    let file = File::open("challenge-data/4.txt").unwrap();
+    let reader = BufReader::new(file);
+
+    for line in reader.lines() {
+        find_single_byte_key(&line.unwrap(), true);
+    }
+}
+
+fn find_single_byte_key(cipher_text: &str, strictly_ascii: bool) {
     let cipher_bytes: Vec<u8> = hex_to_bytes(cipher_text);
     let cipher_text_check: String = bytes_to_hex(&cipher_bytes);
     assert_eq!(cipher_text, &cipher_text_check); // Sanity check
@@ -51,6 +65,9 @@ fn find_single_byte_key(cipher_text: &str) {
         assert_eq!(&xored, &hex_to_bytes(&xored_check)); // Sanity check
 
         let plaintext = String::from_utf8_lossy(&xored);
+        if strictly_ascii && !plaintext.is_ascii() {
+            break;
+        }
         let percentages: Vec<f32> = char_analysis_counts(&plaintext);
         let e_per: f32 = percentages[0];
         let t_per: f32 = percentages[1];
@@ -62,7 +79,10 @@ fn find_single_byte_key(cipher_text: &str) {
         if (e_per > 0.13 || t_per > 0.09 || a_per > 0.08 || o_per > 0.07 || i_per > 0.08)
             && space_per > 0.0
         {
-            println!("key {} produced plaintext \"{:?}\"", i, &plaintext);
+            println!(
+                "cipher_text {} with key {} produced plaintext {:?}",
+                &cipher_text, i, &plaintext
+            );
         }
     }
 }

@@ -52,3 +52,11 @@ _... has been XOR'd against a single character. Find the key, decrypt the messag
 _You can do this by hand. But don't: write code to do it for you._
 
 _How? Devise some method for "scoring" a piece of English plaintext. Character frequency is a good metric. Evaluate each output and choose the one with the best score._
+
+### Challenge 4: Detect single-character XOR
+
+_One of the 60-character strings in [this file](https://cryptopals.com/static/challenge-data/4.txt) has been encrypted by single-character XOR._
+
+_Find it._
+
+_(Your code from #3 should help.) _
