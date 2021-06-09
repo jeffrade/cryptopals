@@ -95,10 +95,7 @@ fn char_analysis_counts(plaintext: &str) -> Vec<f32> {
     let str_len = plaintext.chars().count();
     let plaintext_up: String = plaintext.to_uppercase();
     for ch in FREQ_CHARS.iter() {
-        let ch_count = match plaintext_up.find(|c: char| &c == ch) {
-            Some(count) => count,
-            None => 0,
-        };
+        let ch_count = plaintext_up.find(|c: char| &c == ch).unwrap_or(0);
         percents.push(ch_count as f32 / str_len as f32);
     }
 
@@ -106,20 +103,20 @@ fn char_analysis_counts(plaintext: &str) -> Vec<f32> {
 }
 
 fn hex_xor(hex_1: &str, hex_2: &str) -> String {
-    let bits_1: Vec<bool> = hex_to_bits(hex_1);
-    let bits_2: Vec<bool> = hex_to_bits(hex_2);
-    let xored: Vec<bool> = bits_xor(&bits_1, &bits_2);
+    let bits_1: Vec<u8> = hex_to_bits(hex_1);
+    let bits_2: Vec<u8> = hex_to_bits(hex_2);
+    let xored: Vec<u8> = bits_xor(&bits_1, &bits_2);
     bits_to_hex(&xored)
 }
 
-fn bits_to_hex(bits: &[bool]) -> String {
+fn bits_to_hex(bits: &[u8]) -> String {
     assert_eq!(bits.len() % 4, 0);
     let mut semi_octets: Vec<u8> = Vec::new();
     let chunks = bits.chunks_exact(4);
-    let _remainder: &[bool] = chunks.remainder();
+    let _remainder: &[u8] = chunks.remainder();
     assert_eq!(_remainder.len(), 0);
     for chunk in chunks {
-        let mut padded_vec = vec![false, false, false, false];
+        let mut padded_vec = vec![0b0u8, 0b0u8, 0b0u8, 0b0u8];
         padded_vec.extend(chunk);
         semi_octets.push(bits_to_u8(&padded_vec));
     }
@@ -160,33 +157,32 @@ fn bytes_xor(bytes_1: &[u8], bytes_2: &[u8]) -> Vec<u8> {
 }
 
 // Refactor and DRY up this index padding chaos
-fn bits_xor(bits_1: &[bool], bits_2: &[bool]) -> Vec<bool> {
-    let mut xored: Vec<bool> = Vec::new();
+fn bits_xor(bits_1: &[u8], bits_2: &[u8]) -> Vec<u8> {
+    let mut xored: Vec<u8> = Vec::new();
     let bits_1_len = bits_1.len();
     let bits_2_len = bits_2.len();
 
-    let eq_len = bits_1_len == bits_2_len;
-
-    if eq_len {
+    //FIXME resolve clippy warning with match x.cmp(&y)
+    if bits_1_len == bits_2_len {
         for (i, bit) in bits_1.iter().enumerate() {
             xored.push(bit ^ bits_2[i]);
         }
     } else if bits_1_len < bits_2_len {
         // Maybe use std::cmp::min(bits_1_len, bits_2_len) and check the sign
-        let mut bits_1_vec: Vec<bool> = Vec::new();
+        let mut bits_1_vec: Vec<u8> = Vec::new();
         let to_pad = bits_2_len - bits_1_len + 1;
         for _i in 1..to_pad {
-            bits_1_vec.push(false);
+            bits_1_vec.push(0b0u8);
         }
         bits_1_vec.extend(bits_1);
         for (i, bit) in bits_2.iter().enumerate() {
             xored.push(bit ^ bits_1_vec[i]);
         }
     } else {
-        let mut bits_2_vec: Vec<bool> = Vec::new();
+        let mut bits_2_vec: Vec<u8> = Vec::new();
         let to_pad = bits_1_len - bits_2_len + 1;
         for _i in 1..to_pad {
-            bits_2_vec.push(false);
+            bits_2_vec.push(0b0u8);
         }
         bits_2_vec.extend(bits_2);
         for (i, bit) in bits_1.iter().enumerate() {
@@ -197,18 +193,18 @@ fn bits_xor(bits_1: &[bool], bits_2: &[bool]) -> Vec<bool> {
 }
 
 fn hex_to_base64(hex_str: &str) -> String {
-    let bits: Vec<bool> = hex_to_bits(hex_str);
+    let bits: Vec<u8> = hex_to_bits(hex_str);
 
     let mut base64_result = String::new();
     let chunks = bits.chunks_exact(6);
-    let remainder: &[bool] = chunks.remainder();
+    let remainder: &[u8] = chunks.remainder();
     for chunk in chunks {
         let b64_char: char = six_bits_to_b64(&chunk);
         base64_result.push(b64_char);
     }
 
     if !remainder.is_empty() {
-        let final_chunk: [bool; 6] = fill_6_bit_block(&remainder);
+        let final_chunk: [u8; 6] = fill_6_bit_block(&remainder);
         let final_b64_char: char = six_bits_to_b64(&final_chunk);
         base64_result.push(final_b64_char);
     }
@@ -241,7 +237,7 @@ fn hex_to_bytes(hex: &str) -> Vec<u8> {
     let remainder: &[char] = hex_bytes.remainder();
 
     assert_eq!(hex.len() % 2, 0); //TODO handle odd number of chars with '0' padding prefix
-    assert_eq!(remainder.is_empty(), true); //TODO handle odd number of chars with '0' padding prefix
+    assert!(remainder.is_empty()); //TODO handle odd number of chars with '0' padding prefix
 
     for hex_byte in hex_bytes {
         bytes.push(hex_to_byte(&hex_byte));
@@ -257,24 +253,24 @@ fn hex_to_byte(hex_chars: &[char]) -> u8 {
     (hex_to_semi_octet(first) << 4) + hex_to_semi_octet(last)
 }
 
-fn hex_to_bits(hex: &str) -> Vec<bool> {
+fn hex_to_bits(hex: &str) -> Vec<u8> {
     let hex_chars: Vec<char> = hex.chars().collect();
     hex_vec_to_bit_vec(&hex_chars)
 }
 
-fn fill_6_bit_block(bits: &[bool]) -> [bool; 6] {
-    let mut final_block: [bool; 6] = [false, false, false, false, false, false];
+fn fill_6_bit_block(bits: &[u8]) -> [u8; 6] {
+    let mut final_block: [u8; 6] = [0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8];
     for (i, bit) in bits.iter().enumerate() {
         final_block[i] = *bit;
     }
     final_block
 }
 
-fn hex_vec_to_bit_vec(hex_chars: &[char]) -> Vec<bool> {
-    let mut bits: Vec<bool> = Vec::new();
+fn hex_vec_to_bit_vec(hex_chars: &[char]) -> Vec<u8> {
+    let mut bits: Vec<u8> = Vec::new();
     for hex_char in hex_chars.iter() {
         let binary: u8 = hex_to_semi_octet(*hex_char);
-        let semi_octet_bits: Vec<bool> = u8_to_bits(binary).split_off(4);
+        let semi_octet_bits: Vec<u8> = u8_to_bits(binary).split_off(4);
         for bit in semi_octet_bits.iter() {
             bits.push(*bit);
         }
@@ -358,157 +354,163 @@ fn semi_octet_to_hex(binary: u8) -> char {
     }
 }
 
-fn u8_to_bits(binary: u8) -> Vec<bool> {
-    let mut result: Vec<bool> = Vec::new();
+//TODO This isn't efficient
+fn u8_to_bits(binary: u8) -> Vec<u8> {
+    let mut result: Vec<u8> = Vec::new();
     for i in 0..8 {
-        let bit: bool = ((binary >> i) % 2) == 0b00000001u8;
-        result.push(bit);
+        match ((binary >> i) % 2) == 0b1u8 {
+            true => result.push(0b1u8),
+            false => result.push(0b0u8),
+        }
     }
     result.reverse();
     result
 }
 
-fn bits_to_u8(bits: &[bool]) -> u8 {
+fn bits_to_u8(bits: &[u8]) -> u8 {
     let mut result: u8 = 0;
-    for (i, b) in bits.iter().rev().enumerate() {
-        let to_add = if *b { 1 << i } else { 0 << i };
-        result += to_add;
+    for (i, bit) in bits.iter().rev().enumerate() {
+        match bit {
+            0b1u8 => result += 1 << i,
+            0b0u8 => result += 0 << i,
+            _ => panic!("Not operating in bits!"),
+        }
     }
 
     result
 }
 
-fn six_bits_to_b64(bit_vec: &[bool]) -> char {
-    if bit_vec == [false, false, false, false, false, false] {
+fn six_bits_to_b64(bit_vec: &[u8]) -> char {
+    if bit_vec == [0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8] {
         'A'
-    } else if bit_vec == [false, false, false, false, false, true] {
+    } else if bit_vec == [0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b1u8] {
         'B'
-    } else if bit_vec == [false, false, false, false, true, false] {
+    } else if bit_vec == [0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b1u8, 0b0u8] {
         'C'
-    } else if bit_vec == [false, false, false, false, true, true] {
+    } else if bit_vec == [0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b1u8, 0b1u8] {
         'D'
-    } else if bit_vec == [false, false, false, true, false, false] {
+    } else if bit_vec == [0b0u8, 0b0u8, 0b0u8, 0b1u8, 0b0u8, 0b0u8] {
         'E'
-    } else if bit_vec == [false, false, false, true, false, true] {
+    } else if bit_vec == [0b0u8, 0b0u8, 0b0u8, 0b1u8, 0b0u8, 0b1u8] {
         'F'
-    } else if bit_vec == [false, false, false, true, true, false] {
+    } else if bit_vec == [0b0u8, 0b0u8, 0b0u8, 0b1u8, 0b1u8, 0b0u8] {
         'G'
-    } else if bit_vec == [false, false, false, true, true, true] {
+    } else if bit_vec == [0b0u8, 0b0u8, 0b0u8, 0b1u8, 0b1u8, 0b1u8] {
         'H'
-    } else if bit_vec == [false, false, true, false, false, false] {
+    } else if bit_vec == [0b0u8, 0b0u8, 0b1u8, 0b0u8, 0b0u8, 0b0u8] {
         'I'
-    } else if bit_vec == [false, false, true, false, false, true] {
+    } else if bit_vec == [0b0u8, 0b0u8, 0b1u8, 0b0u8, 0b0u8, 0b1u8] {
         'J'
-    } else if bit_vec == [false, false, true, false, true, false] {
+    } else if bit_vec == [0b0u8, 0b0u8, 0b1u8, 0b0u8, 0b1u8, 0b0u8] {
         'K'
-    } else if bit_vec == [false, false, true, false, true, true] {
+    } else if bit_vec == [0b0u8, 0b0u8, 0b1u8, 0b0u8, 0b1u8, 0b1u8] {
         'L'
-    } else if bit_vec == [false, false, true, true, false, false] {
+    } else if bit_vec == [0b0u8, 0b0u8, 0b1u8, 0b1u8, 0b0u8, 0b0u8] {
         'M'
-    } else if bit_vec == [false, false, true, true, false, true] {
+    } else if bit_vec == [0b0u8, 0b0u8, 0b1u8, 0b1u8, 0b0u8, 0b1u8] {
         'N'
-    } else if bit_vec == [false, false, true, true, true, false] {
+    } else if bit_vec == [0b0u8, 0b0u8, 0b1u8, 0b1u8, 0b1u8, 0b0u8] {
         'O'
-    } else if bit_vec == [false, false, true, true, true, true] {
+    } else if bit_vec == [0b0u8, 0b0u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8] {
         'P'
-    } else if bit_vec == [false, true, false, false, false, false] {
+    } else if bit_vec == [0b0u8, 0b1u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8] {
         'Q'
-    } else if bit_vec == [false, true, false, false, false, true] {
+    } else if bit_vec == [0b0u8, 0b1u8, 0b0u8, 0b0u8, 0b0u8, 0b1u8] {
         'R'
-    } else if bit_vec == [false, true, false, false, true, false] {
+    } else if bit_vec == [0b0u8, 0b1u8, 0b0u8, 0b0u8, 0b1u8, 0b0u8] {
         'S'
-    } else if bit_vec == [false, true, false, false, true, true] {
+    } else if bit_vec == [0b0u8, 0b1u8, 0b0u8, 0b0u8, 0b1u8, 0b1u8] {
         'T'
-    } else if bit_vec == [false, true, false, true, false, false] {
+    } else if bit_vec == [0b0u8, 0b1u8, 0b0u8, 0b1u8, 0b0u8, 0b0u8] {
         'U'
-    } else if bit_vec == [false, true, false, true, false, true] {
+    } else if bit_vec == [0b0u8, 0b1u8, 0b0u8, 0b1u8, 0b0u8, 0b1u8] {
         'V'
-    } else if bit_vec == [false, true, false, true, true, false] {
+    } else if bit_vec == [0b0u8, 0b1u8, 0b0u8, 0b1u8, 0b1u8, 0b0u8] {
         'W'
-    } else if bit_vec == [false, true, false, true, true, true] {
+    } else if bit_vec == [0b0u8, 0b1u8, 0b0u8, 0b1u8, 0b1u8, 0b1u8] {
         'X'
-    } else if bit_vec == [false, true, true, false, false, false] {
+    } else if bit_vec == [0b0u8, 0b1u8, 0b1u8, 0b0u8, 0b0u8, 0b0u8] {
         'Y'
-    } else if bit_vec == [false, true, true, false, false, true] {
+    } else if bit_vec == [0b0u8, 0b1u8, 0b1u8, 0b0u8, 0b0u8, 0b1u8] {
         'Z'
-    } else if bit_vec == [false, true, true, false, true, false] {
+    } else if bit_vec == [0b0u8, 0b1u8, 0b1u8, 0b0u8, 0b1u8, 0b0u8] {
         'a'
-    } else if bit_vec == [false, true, true, false, true, true] {
+    } else if bit_vec == [0b0u8, 0b1u8, 0b1u8, 0b0u8, 0b1u8, 0b1u8] {
         'b'
-    } else if bit_vec == [false, true, true, true, false, false] {
+    } else if bit_vec == [0b0u8, 0b1u8, 0b1u8, 0b1u8, 0b0u8, 0b0u8] {
         'c'
-    } else if bit_vec == [false, true, true, true, false, true] {
+    } else if bit_vec == [0b0u8, 0b1u8, 0b1u8, 0b1u8, 0b0u8, 0b1u8] {
         'd'
-    } else if bit_vec == [false, true, true, true, true, false] {
+    } else if bit_vec == [0b0u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b0u8] {
         'e'
-    } else if bit_vec == [false, true, true, true, true, true] {
+    } else if bit_vec == [0b0u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8] {
         'f'
-    } else if bit_vec == [true, false, false, false, false, false] {
+    } else if bit_vec == [0b1u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8] {
         'g'
-    } else if bit_vec == [true, false, false, false, false, true] {
+    } else if bit_vec == [0b1u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b1u8] {
         'h'
-    } else if bit_vec == [true, false, false, false, true, false] {
+    } else if bit_vec == [0b1u8, 0b0u8, 0b0u8, 0b0u8, 0b1u8, 0b0u8] {
         'i'
-    } else if bit_vec == [true, false, false, false, true, true] {
+    } else if bit_vec == [0b1u8, 0b0u8, 0b0u8, 0b0u8, 0b1u8, 0b1u8] {
         'j'
-    } else if bit_vec == [true, false, false, true, false, false] {
+    } else if bit_vec == [0b1u8, 0b0u8, 0b0u8, 0b1u8, 0b0u8, 0b0u8] {
         'k'
-    } else if bit_vec == [true, false, false, true, false, true] {
+    } else if bit_vec == [0b1u8, 0b0u8, 0b0u8, 0b1u8, 0b0u8, 0b1u8] {
         'l'
-    } else if bit_vec == [true, false, false, true, true, false] {
+    } else if bit_vec == [0b1u8, 0b0u8, 0b0u8, 0b1u8, 0b1u8, 0b0u8] {
         'm'
-    } else if bit_vec == [true, false, false, true, true, true] {
+    } else if bit_vec == [0b1u8, 0b0u8, 0b0u8, 0b1u8, 0b1u8, 0b1u8] {
         'n'
-    } else if bit_vec == [true, false, true, false, false, false] {
+    } else if bit_vec == [0b1u8, 0b0u8, 0b1u8, 0b0u8, 0b0u8, 0b0u8] {
         'o'
-    } else if bit_vec == [true, false, true, false, false, true] {
+    } else if bit_vec == [0b1u8, 0b0u8, 0b1u8, 0b0u8, 0b0u8, 0b1u8] {
         'p'
-    } else if bit_vec == [true, false, true, false, true, false] {
+    } else if bit_vec == [0b1u8, 0b0u8, 0b1u8, 0b0u8, 0b1u8, 0b0u8] {
         'q'
-    } else if bit_vec == [true, false, true, false, true, true] {
+    } else if bit_vec == [0b1u8, 0b0u8, 0b1u8, 0b0u8, 0b1u8, 0b1u8] {
         'r'
-    } else if bit_vec == [true, false, true, true, false, false] {
+    } else if bit_vec == [0b1u8, 0b0u8, 0b1u8, 0b1u8, 0b0u8, 0b0u8] {
         's'
-    } else if bit_vec == [true, false, true, true, false, true] {
+    } else if bit_vec == [0b1u8, 0b0u8, 0b1u8, 0b1u8, 0b0u8, 0b1u8] {
         't'
-    } else if bit_vec == [true, false, true, true, true, false] {
+    } else if bit_vec == [0b1u8, 0b0u8, 0b1u8, 0b1u8, 0b1u8, 0b0u8] {
         'u'
-    } else if bit_vec == [true, false, true, true, true, true] {
+    } else if bit_vec == [0b1u8, 0b0u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8] {
         'v'
-    } else if bit_vec == [true, true, false, false, false, false] {
+    } else if bit_vec == [0b1u8, 0b1u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8] {
         'w'
-    } else if bit_vec == [true, true, false, false, false, true] {
+    } else if bit_vec == [0b1u8, 0b1u8, 0b0u8, 0b0u8, 0b0u8, 0b1u8] {
         'x'
-    } else if bit_vec == [true, true, false, false, true, false] {
+    } else if bit_vec == [0b1u8, 0b1u8, 0b0u8, 0b0u8, 0b1u8, 0b0u8] {
         'y'
-    } else if bit_vec == [true, true, false, false, true, true] {
+    } else if bit_vec == [0b1u8, 0b1u8, 0b0u8, 0b0u8, 0b1u8, 0b1u8] {
         'z'
-    } else if bit_vec == [true, true, false, true, false, false] {
+    } else if bit_vec == [0b1u8, 0b1u8, 0b0u8, 0b1u8, 0b0u8, 0b0u8] {
         '0'
-    } else if bit_vec == [true, true, false, true, false, true] {
+    } else if bit_vec == [0b1u8, 0b1u8, 0b0u8, 0b1u8, 0b0u8, 0b1u8] {
         '1'
-    } else if bit_vec == [true, true, false, true, true, false] {
+    } else if bit_vec == [0b1u8, 0b1u8, 0b0u8, 0b1u8, 0b1u8, 0b0u8] {
         '2'
-    } else if bit_vec == [true, true, false, true, true, true] {
+    } else if bit_vec == [0b1u8, 0b1u8, 0b0u8, 0b1u8, 0b1u8, 0b1u8] {
         '3'
-    } else if bit_vec == [true, true, true, false, false, false] {
+    } else if bit_vec == [0b1u8, 0b1u8, 0b1u8, 0b0u8, 0b0u8, 0b0u8] {
         '4'
-    } else if bit_vec == [true, true, true, false, false, true] {
+    } else if bit_vec == [0b1u8, 0b1u8, 0b1u8, 0b0u8, 0b0u8, 0b1u8] {
         '5'
-    } else if bit_vec == [true, true, true, false, true, false] {
+    } else if bit_vec == [0b1u8, 0b1u8, 0b1u8, 0b0u8, 0b1u8, 0b0u8] {
         '6'
-    } else if bit_vec == [true, true, true, false, true, true] {
+    } else if bit_vec == [0b1u8, 0b1u8, 0b1u8, 0b0u8, 0b1u8, 0b1u8] {
         '7'
-    } else if bit_vec == [true, true, true, true, false, false] {
+    } else if bit_vec == [0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b0u8, 0b0u8] {
         '8'
-    } else if bit_vec == [true, true, true, true, false, true] {
+    } else if bit_vec == [0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b0u8, 0b1u8] {
         '9'
-    } else if bit_vec == [true, true, true, true, true, false] {
+    } else if bit_vec == [0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b0u8] {
         '+'
-    } else if bit_vec == [true, true, true, true, true, true] {
+    } else if bit_vec == [0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8] {
         '/'
     } else {
-        panic!("Received a vec that I cannot handle: {:?}", bit_vec)
+        panic!("Received a u8 I cannot handle: {:?}", bit_vec)
     }
 }
 
@@ -535,22 +537,53 @@ mod tests {
 
     #[test]
     fn test_bits_to_hex() {
-        assert_eq!(bits_to_hex(&[false, false, false, false]), "0");
+        assert_eq!(bits_to_hex(&[0b0u8, 0b0u8, 0b0u8, 0b0u8]), "0");
         assert_eq!(
-            bits_to_hex(&[false, false, false, false, false, false, false, false]),
+            bits_to_hex(&[0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8]),
             "00"
         );
         assert_eq!(
             bits_to_hex(&[
-                true, true, true, true, false, false, false, false, false, false, false, false
+                0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8
             ]),
             "f00"
         );
         assert_eq!(
             bits_to_hex(&[
-                true, false, true, true, true, false, true, false, false, true, true, true
+                0b1u8, 0b0u8, 0b1u8, 0b1u8, 0b1u8, 0b0u8, 0b1u8, 0b0u8, 0b0u8, 0b1u8, 0b1u8, 0b1u8
             ]),
             "ba7"
+        );
+    }
+
+    #[test]
+    fn test_hex_to_bits() {
+        assert_eq!(hex_to_bits("0"), vec![0b0u8, 0b0u8, 0b0u8, 0b0u8]);
+        assert_eq!(hex_to_bits("1"), vec![0b0u8, 0b0u8, 0b0u8, 0b1u8]);
+        assert_eq!(hex_to_bits("f"), vec![0b1u8, 0b1u8, 0b1u8, 0b1u8]);
+        assert_eq!(
+            hex_to_bits("f0"),
+            vec![0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8]
+        );
+        assert_eq!(
+            hex_to_bits("ff"),
+            vec![0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8]
+        );
+        assert_eq!(
+            hex_to_bits("1f"),
+            vec![0b0u8, 0b0u8, 0b0u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8]
+        );
+        assert_eq!(
+            hex_to_bits("f1"),
+            vec![0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b0u8, 0b0u8, 0b0u8, 0b1u8]
+        );
+        assert_eq!(
+            hex_to_bits("a5"),
+            vec![0b1u8, 0b0u8, 0b1u8, 0b0u8, 0b0u8, 0b1u8, 0b0u8, 0b1u8]
+        );
+        assert_eq!(
+            hex_to_bits("5a"),
+            vec![0b0u8, 0b1u8, 0b0u8, 0b1u8, 0b1u8, 0b0u8, 0b1u8, 0b0u8]
         );
     }
 
@@ -608,42 +641,42 @@ mod tests {
 
     #[test]
     fn test_bits_xor() {
-        assert_eq!(vec![false], bits_xor(&[false], &[false]));
-        assert_eq!(vec![false], bits_xor(&[true], &[true]));
-        assert_eq!(vec![true], bits_xor(&[false], &[true]));
+        assert_eq!(vec![0b0u8], bits_xor(&[0b0u8], &[0b0u8]));
+        assert_eq!(vec![0b0u8], bits_xor(&[0b1u8], &[0b1u8]));
+        assert_eq!(vec![0b1u8], bits_xor(&[0b0u8], &[0b1u8]));
 
         assert_eq!(
-            vec![false, false, false],
-            bits_xor(&[false, true, true], &[false, true, true])
+            vec![0b0u8, 0b0u8, 0b0u8],
+            bits_xor(&[0b0u8, 0b1u8, 0b1u8], &[0b0u8, 0b1u8, 0b1u8])
         );
         assert_eq!(
-            vec![true, true, true],
-            bits_xor(&[false, true, true], &[true, false, false])
+            vec![0b1u8, 0b1u8, 0b1u8],
+            bits_xor(&[0b0u8, 0b1u8, 0b1u8], &[0b1u8, 0b0u8, 0b0u8])
         );
 
         assert_eq!(
-            vec![true, true, true, false],
-            bits_xor(&[true, true, false], &[true, false, false, false])
+            vec![0b1u8, 0b1u8, 0b1u8, 0b0u8],
+            bits_xor(&[0b1u8, 0b1u8, 0b0u8], &[0b1u8, 0b0u8, 0b0u8, 0b0u8])
         );
     }
 
     #[test]
     fn test_bits_to_u8() {
-        assert_eq!(0, bits_to_u8(&[false]));
-        assert_eq!(0, bits_to_u8(&[false, false]));
-        assert_eq!(1, bits_to_u8(&[true]));
-        assert_eq!(2, bits_to_u8(&[true, false]));
-        assert_eq!(1, bits_to_u8(&[false, true]));
-        assert_eq!(2, bits_to_u8(&[false, true, false]));
-        assert_eq!(6, bits_to_u8(&[true, true, false]));
-        assert_eq!(7, bits_to_u8(&[true, true, true]));
+        assert_eq!(0, bits_to_u8(&[0b0u8]));
+        assert_eq!(0, bits_to_u8(&[0b0u8, 0b0u8]));
+        assert_eq!(1, bits_to_u8(&[0b1u8]));
+        assert_eq!(2, bits_to_u8(&[0b1u8, 0b0u8]));
+        assert_eq!(1, bits_to_u8(&[0b0u8, 0b1u8]));
+        assert_eq!(2, bits_to_u8(&[0b0u8, 0b1u8, 0b0u8]));
+        assert_eq!(6, bits_to_u8(&[0b1u8, 0b1u8, 0b0u8]));
+        assert_eq!(7, bits_to_u8(&[0b1u8, 0b1u8, 0b1u8]));
         assert_eq!(
             118,
-            bits_to_u8(&[false, true, true, true, false, true, true, false])
+            bits_to_u8(&[0b0u8, 0b1u8, 0b1u8, 0b1u8, 0b0u8, 0b1u8, 0b1u8, 0b0u8])
         );
         assert_eq!(
             255,
-            bits_to_u8(&[true, true, true, true, true, true, true, true])
+            bits_to_u8(&[0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8])
         );
     }
 
@@ -651,27 +684,46 @@ mod tests {
     fn test_u8_to_bits() {
         assert_eq!(
             u8_to_bits(0b00000000u8),
-            [false, false, false, false, false, false, false, false]
-        );
-        assert_eq!(
-            u8_to_bits(0b00000001u8),
-            [false, false, false, false, false, false, false, true]
-        );
-        assert_eq!(
-            u8_to_bits(0b00000010u8),
-            [false, false, false, false, false, false, true, false]
-        );
-        assert_eq!(
-            u8_to_bits(0b00010000u8),
-            [false, false, false, true, false, false, false, false]
-        );
-        assert_eq!(
-            u8_to_bits(0b00010001u8),
-            [false, false, false, true, false, false, false, true]
+            [0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8]
         );
         assert_eq!(
             u8_to_bits(0b11111111u8),
-            [true, true, true, true, true, true, true, true]
+            [0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8, 0b1u8]
         );
+        assert_eq!(
+            u8_to_bits(0b00000001u8),
+            [0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b1u8]
+        );
+        assert_eq!(
+            u8_to_bits(0b10000000u8),
+            [0b1u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8]
+        );
+        assert_eq!(
+            u8_to_bits(0b11000010u8),
+            [0b1u8, 0b1u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b1u8, 0b0u8]
+        );
+        assert_eq!(
+            u8_to_bits(0b00000010u8),
+            [0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8, 0b1u8, 0b0u8]
+        );
+        assert_eq!(
+            u8_to_bits(0b00010000u8),
+            [0b0u8, 0b0u8, 0b0u8, 0b1u8, 0b0u8, 0b0u8, 0b0u8, 0b0u8]
+        );
+    }
+
+    #[test]
+    fn test_bits_xor_expiremental() {
+        assert_eq!(1u8, 0b00000001u8);
+        assert_eq!(1, 0b00000001u8);
+        assert_eq!(1, 0b1u8);
+        assert_eq!(1, 0b1);
+        assert_eq!(0b1, 0b1 | 0b1);
+        assert_eq!(0b0, 0b1 ^ 0b1);
+        assert_eq!(0b1, 0b1 & 0b1);
+        assert_eq!(0b0, 0b0 & 0b1);
+        assert_eq!(0b11111111, 0b00000000 ^ 0b11111111);
+        assert_eq!(0b00000000, 0b00000000 & 0b11111111);
+        assert_eq!(0b01010101, 0b10101010 ^ 0b11111111);
     }
 }
