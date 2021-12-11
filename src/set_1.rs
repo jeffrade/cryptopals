@@ -7,6 +7,7 @@ pub fn challenges() {
     challenge_2(); // https://cryptopals.com/sets/1/challenges/2
     challenge_3(); // https://cryptopals.com/sets/1/challenges/3
     challenge_4(); // https://cryptopals.com/sets/1/challenges/4
+    challenge_5(); // https://cryptopals.com/sets/1/challenges/5
 }
 
 // https://en.wikipedia.org/wiki/Hexadecimal
@@ -44,6 +45,38 @@ fn challenge_4() {
     for line in reader.lines() {
         find_single_byte_key(&line.unwrap(), true);
     }
+}
+
+fn challenge_5() {
+    let stanza_plaintext =
+        "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
+    let symmetric_key = "ICE";
+    let ciphertext = repeating_key_xor(stanza_plaintext, symmetric_key);
+    assert_eq!(
+        ciphertext,
+        String::from("0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f")
+    );
+}
+
+fn repeating_key_xor(plaintext: &str, key: &str) -> String {
+    let mut ciphertext_bytes = Vec::<u8>::new();
+    let plaintext_bytes = plaintext.as_bytes();
+    let key_bytes = key.as_bytes();
+    let key_length = key_bytes.len();
+    let mut key_index = 0;
+
+    for plaintext_byte in plaintext_bytes {
+        if key_index == key_length {
+            key_index = 0;
+        }
+
+        let xored = plaintext_byte ^ key_bytes[key_index];
+        ciphertext_bytes.push(xored);
+
+        key_index += 1;
+    }
+
+    bytes_to_hex(&ciphertext_bytes)
 }
 
 fn find_single_byte_key(cipher_text: &str, strictly_ascii: bool) {
