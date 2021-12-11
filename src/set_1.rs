@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::fs::File;
 use std::io::{prelude::*, BufReader};
 
@@ -10,7 +11,7 @@ pub fn challenges() {
 
 // https://en.wikipedia.org/wiki/Hexadecimal
 // https://en.wikipedia.org/wiki/Base64
-pub fn challenge_1() {
+fn challenge_1() {
     assert_eq!(
         hex_to_base64("49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d"),
         String::from("SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t")
@@ -19,7 +20,7 @@ pub fn challenge_1() {
 
 // https://www.binaryhexconverter.com/hex-to-binary-converter
 // http://www.xor.pw
-pub fn challenge_2() {
+fn challenge_2() {
     assert_eq!(
         hex_xor(
             "1c0111001f010100061a024b53535009181c",
@@ -30,13 +31,13 @@ pub fn challenge_2() {
 }
 
 // https://en.wikipedia.org/wiki/Letter_frequency
-pub fn challenge_3() {
+fn challenge_3() {
     let cipher_text: &str = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
     find_single_byte_key(cipher_text, true);
 }
 
 // "Now that the party is jumping"
-pub fn challenge_4() {
+fn challenge_4() {
     let file = File::open("challenge-data/4.txt").unwrap();
     let reader = BufReader::new(file);
 
@@ -162,33 +163,37 @@ fn bits_xor(bits_1: &[u8], bits_2: &[u8]) -> Vec<u8> {
     let bits_1_len = bits_1.len();
     let bits_2_len = bits_2.len();
 
-    //FIXME resolve clippy warning with match x.cmp(&y)
-    if bits_1_len == bits_2_len {
-        for (i, bit) in bits_1.iter().enumerate() {
-            xored.push(bit ^ bits_2[i]);
+    match bits_1_len.cmp(&bits_2_len) {
+        Ordering::Greater => {
+            let mut bits_2_vec: Vec<u8> = Vec::new();
+            let to_pad = bits_1_len - bits_2_len + 1;
+            for _i in 1..to_pad {
+                bits_2_vec.push(0b0u8);
+            }
+            bits_2_vec.extend(bits_2);
+            for (i, bit) in bits_1.iter().enumerate() {
+                xored.push(bit ^ bits_2_vec[i]);
+            }
         }
-    } else if bits_1_len < bits_2_len {
-        // Maybe use std::cmp::min(bits_1_len, bits_2_len) and check the sign
-        let mut bits_1_vec: Vec<u8> = Vec::new();
-        let to_pad = bits_2_len - bits_1_len + 1;
-        for _i in 1..to_pad {
-            bits_1_vec.push(0b0u8);
+        Ordering::Less => {
+            // Maybe use std::cmp::min(bits_1_len, bits_2_len) and check the sign
+            let mut bits_1_vec: Vec<u8> = Vec::new();
+            let to_pad = bits_2_len - bits_1_len + 1;
+            for _i in 1..to_pad {
+                bits_1_vec.push(0b0u8);
+            }
+            bits_1_vec.extend(bits_1);
+            for (i, bit) in bits_2.iter().enumerate() {
+                xored.push(bit ^ bits_1_vec[i]);
+            }
         }
-        bits_1_vec.extend(bits_1);
-        for (i, bit) in bits_2.iter().enumerate() {
-            xored.push(bit ^ bits_1_vec[i]);
-        }
-    } else {
-        let mut bits_2_vec: Vec<u8> = Vec::new();
-        let to_pad = bits_1_len - bits_2_len + 1;
-        for _i in 1..to_pad {
-            bits_2_vec.push(0b0u8);
-        }
-        bits_2_vec.extend(bits_2);
-        for (i, bit) in bits_1.iter().enumerate() {
-            xored.push(bit ^ bits_2_vec[i]);
+        Ordering::Equal => {
+            for (i, bit) in bits_1.iter().enumerate() {
+                xored.push(bit ^ bits_2[i]);
+            }
         }
     }
+
     xored
 }
 
@@ -199,12 +204,12 @@ fn hex_to_base64(hex_str: &str) -> String {
     let chunks = bits.chunks_exact(6);
     let remainder: &[u8] = chunks.remainder();
     for chunk in chunks {
-        let b64_char: char = six_bits_to_b64(&chunk);
+        let b64_char: char = six_bits_to_b64(chunk);
         base64_result.push(b64_char);
     }
 
     if !remainder.is_empty() {
-        let final_chunk: [u8; 6] = fill_6_bit_block(&remainder);
+        let final_chunk: [u8; 6] = fill_6_bit_block(remainder);
         let final_b64_char: char = six_bits_to_b64(&final_chunk);
         base64_result.push(final_b64_char);
     }
@@ -240,7 +245,7 @@ fn hex_to_bytes(hex: &str) -> Vec<u8> {
     assert!(remainder.is_empty()); //TODO handle odd number of chars with '0' padding prefix
 
     for hex_byte in hex_bytes {
-        bytes.push(hex_to_byte(&hex_byte));
+        bytes.push(hex_to_byte(hex_byte));
     }
 
     bytes
