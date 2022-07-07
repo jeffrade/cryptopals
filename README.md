@@ -80,3 +80,28 @@ a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f
 ```
 
 _Encrypt a bunch of stuff using your repeating-key XOR function. Encrypt your mail. Encrypt your password file. Your .sig file. Get a feel for it. I promise, we aren't wasting your time with this._
+
+### Challenge 6: Break repeating-key XOR
+
+_There's a file [here](https://cryptopals.com/static/challenge-data/6.txt). It's been base64'd after being encrypted with repeating-key XOR._
+
+_Decrypt it._
+
+_Here's how:_
+
+1. _Let KEYSIZE be the guessed length of the key; try values from 2 to (say) 40._
+2. _Write a function to compute the edit distance/Hamming distance between two strings. The Hamming distance is just the number of differing bits. The distance between:_
+```
+this is a test
+```
+_and_
+```
+wokka wokka!!!
+```
+_is 37. Make sure your code agrees before you proceed._
+3. _For each KEYSIZE, take the first KEYSIZE worth of bytes, and the second KEYSIZE worth of bytes, and find the edit distance between them. Normalize this result by dividing by KEYSIZE._
+4. _The KEYSIZE with the smallest normalized edit distance is probably the key. You could proceed perhaps with the smallest 2-3 KEYSIZE values. Or take 4 KEYSIZE blocks instead of 2 and average the distances._
+5. _Now that you probably know the KEYSIZE: break the ciphertext into blocks of KEYSIZE length_.
+6. _Now transpose the blocks: make a block that is the first byte of every block, and a block that is the second byte of every block, and so on._
+7. _Solve each block as if it was single-character XOR. You already have code to do this._
+8. _For each block, the single-byte XOR key that produces the best looking histogram is the repeating-key XOR key byte for that block. Put them together and you have the key._
