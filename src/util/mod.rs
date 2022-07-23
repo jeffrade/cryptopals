@@ -121,6 +121,119 @@ fn hamming_weight(v: Vec<u8>) -> u32 {
         .get_or_insert(0)
 }
 
+pub fn resembles_english(plaintext: &str) -> bool {
+    // Try different patterns to see if we are close to the english language
+    //FIXME Build a few simple regex's
+    plaintext.to_lowercase().contains(" the ")
+        && plaintext.to_lowercase().contains(" a ")
+        && plaintext.contains(". ")
+        || plaintext.contains(". The")
+        || (plaintext.contains(" of ") && plaintext.contains(" the "))
+        || (plaintext.contains(" is ") && plaintext.contains(" of "))
+        || plaintext.contains(" this ")
+        || plaintext.contains(" that ")
+}
+
+pub fn is_text(x: &u8) -> bool {
+    *x >= 65_u8 && *x <= 122_u8 || *x == 32_u8
+}
+
+pub fn repeating_key_xor(input: &str, key: &str) -> Vec<u8> {
+    repeating_key_xor_bytes(input.as_bytes(), key.as_bytes())
+}
+
+pub fn repeating_key_xor_bytes(input: &[u8], key: &[u8]) -> Vec<u8> {
+    let mut output = Vec::<u8>::new();
+    let key_length = key.len();
+    let mut key_index = 0;
+
+    for input_byte in input {
+        if key_index == key_length {
+            key_index = 0;
+        }
+
+        let xored = input_byte ^ key[key_index];
+        output.push(xored);
+
+        key_index += 1;
+    }
+
+    output
+}
+
+pub fn find_single_byte_key(ciphertext_bytes: &[u8], detect_english: bool) -> u8 {
+    let mut best_guess: u8 = 0;
+    let mut max_count: i32 = 0;
+    for i in 32..=126 {
+        let key_guess = vec![i; ciphertext_bytes.len()];
+        let xored: Vec<u8> = bytes_xor(ciphertext_bytes, &key_guess);
+        let text_count = xored
+            .iter()
+            .fold(0, |acc, x| if is_text(x) { acc + 1 } else { acc });
+
+        let mut english_ish = true;
+        if detect_english {
+            let plaintext = String::from_utf8_lossy(&xored);
+            english_ish = english_analysis_hit(&plaintext, 1.0);
+        }
+        if english_ish && text_count > max_count {
+            max_count = text_count;
+            best_guess = i;
+        }
+    }
+    best_guess
+}
+
+fn english_analysis_hit(plaintext: &str, multiplier: f32) -> bool {
+    // Let's just do something simple for now to only show most likely plaintexts.
+    if !plaintext.is_ascii() {
+        return false;
+    }
+    let percentages = char_analysis_counts(plaintext);
+    let e_per: f32 = percentages[0];
+    let t_per: f32 = percentages[1];
+    let a_per: f32 = percentages[2];
+    let o_per: f32 = percentages[3];
+    let i_per: f32 = percentages[4];
+    let n_per: f32 = percentages[5];
+    let s_per: f32 = percentages[6];
+    let h_per: f32 = percentages[7];
+    let r_per: f32 = percentages[8];
+    let d_per: f32 = percentages[9];
+    let l_per: f32 = percentages[10];
+    let u_per: f32 = percentages[11];
+    let space_per: f32 = percentages[12];
+
+    (e_per > multiplier * 0.13
+        || t_per > multiplier * 0.091
+        || a_per > multiplier * 0.082
+        || o_per > multiplier * 0.075
+        || i_per > multiplier * 0.07
+        || n_per > multiplier * 0.067
+        || s_per > multiplier * 0.063
+        || h_per > multiplier * 0.061
+        || r_per > multiplier * 0.06
+        || d_per > multiplier * 0.043
+        || l_per > multiplier * 0.04
+        || u_per > multiplier * 0.028)
+        && space_per > multiplier * 0.07
+}
+
+fn char_analysis_counts(plaintext: &str) -> Vec<f32> {
+    const FREQ_CHARS: [char; 13] = [
+        'E', 'T', 'A', 'O', 'I', 'N', 'S', 'H', 'R', 'D', 'L', 'U', ' ',
+    ];
+    let mut percents: Vec<f32> = Vec::new();
+    let str_len = plaintext.chars().count();
+    let plaintext_up: String = plaintext.to_uppercase();
+    for ch in FREQ_CHARS.iter() {
+        let ch_count = plaintext_up.find(|c: char| &c == ch).unwrap_or(0);
+        percents.push(ch_count as f32 / str_len as f32);
+    }
+
+    percents
+}
+
 fn bits_to_hex(bits: &[u8]) -> String {
     assert_eq!(bits.len() % 4, 0);
     let mut semi_octets: Vec<u8> = Vec::new();
@@ -824,6 +937,16 @@ mod tests {
         let a = "this is a test";
         let b = "wokka wokka!!!";
         assert_eq!(hamming_distance(a.as_bytes(), b.as_bytes()), 37);
+    }
+
+    #[test]
+    fn test_is_text() {
+        assert_eq!(is_text(&31_u8), false);
+        assert_eq!(is_text(&32_u8), true);
+        assert_eq!(is_text(&33_u8), false);
+        assert_eq!(is_text(&3_u8), false);
+        assert_eq!(is_text(&122_u8), true);
+        assert_eq!(is_text(&123_u8), false);
     }
 
     const BASE64_INPUT: &str = r"
