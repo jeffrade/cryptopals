@@ -55,7 +55,7 @@ _How? Devise some method for "scoring" a piece of English plaintext. Character f
 
 ### Challenge 4: Detect single-character XOR
 
-_One of the 60-character strings in [this file](https://github.com/jeffrade/cryptopals/blob/master/challenge-data/4.txt) has been encrypted by single-character XOR._
+_One of the 60-character strings in [this file](https://raw.githubusercontent.com/jeffrade/cryptopals/master/challenge-data/4.txt) has been encrypted by single-character XOR._
 
 _Find it._
 
@@ -83,7 +83,7 @@ _Encrypt a bunch of stuff using your repeating-key XOR function. Encrypt your ma
 
 ### Challenge 6: Break repeating-key XOR
 
-_There's a file [here](https://github.com/jeffrade/cryptopals/blob/master/challenge-data/6.txt). It's been base64'd after being encrypted with repeating-key XOR._
+_There's a file [here](https://raw.githubusercontent.com/jeffrade/cryptopals/master/challenge-data/6.txt). It's been base64'd after being encrypted with repeating-key XOR._
 
 _Decrypt it._
 
@@ -94,11 +94,12 @@ _Here's how:_
 ```
 this is a test
 ```
-_and_
+ _and_
 ```
 wokka wokka!!!
 ```
-_is 37. Make sure your code agrees before you proceed._
+ _is 37. Make sure your code agrees before you proceed._
+
 3. _For each KEYSIZE, take the first KEYSIZE worth of bytes, and the second KEYSIZE worth of bytes, and find the edit distance between them. Normalize this result by dividing by KEYSIZE._
 4. _The KEYSIZE with the smallest normalized edit distance is probably the key. You could proceed perhaps with the smallest 2-3 KEYSIZE values. Or take 4 KEYSIZE blocks instead of 2 and average the distances._
 5. _Now that you probably know the KEYSIZE: break the ciphertext into blocks of KEYSIZE length_.
@@ -108,7 +109,7 @@ _is 37. Make sure your code agrees before you proceed._
 
 ### Challenge 7: AES in ECB mode
 
-_The Base64-encoded content [in this file](https://github.com/jeffrade/cryptopals/blob/master/challenge-data/7.txt) has been encrypted via AES-128 in ECB mode under the key_
+_The Base64-encoded content [in this file](https://raw.githubusercontent.com/jeffrade/cryptopals/master/challenge-data/7.txt) has been encrypted via AES-128 in ECB mode under the key_
 ```
 "YELLOW SUBMARINE".
 ```
