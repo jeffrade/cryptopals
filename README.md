@@ -55,7 +55,7 @@ _How? Devise some method for "scoring" a piece of English plaintext. Character f
 
 ### Challenge 4: Detect single-character XOR
 
-_One of the 60-character strings in [this file](https://cryptopals.com/static/challenge-data/4.txt) has been encrypted by single-character XOR._
+_One of the 60-character strings in [this file](https://github.com/jeffrade/cryptopals/blob/master/challenge-data/4.txt) has been encrypted by single-character XOR._
 
 _Find it._
 
@@ -83,7 +83,7 @@ _Encrypt a bunch of stuff using your repeating-key XOR function. Encrypt your ma
 
 ### Challenge 6: Break repeating-key XOR
 
-_There's a file [here](https://cryptopals.com/static/challenge-data/6.txt). It's been base64'd after being encrypted with repeating-key XOR._
+_There's a file [here](https://github.com/jeffrade/cryptopals/blob/master/challenge-data/6.txt). It's been base64'd after being encrypted with repeating-key XOR._
 
 _Decrypt it._
 
@@ -105,3 +105,15 @@ _is 37. Make sure your code agrees before you proceed._
 6. _Now transpose the blocks: make a block that is the first byte of every block, and a block that is the second byte of every block, and so on._
 7. _Solve each block as if it was single-character XOR. You already have code to do this._
 8. _For each block, the single-byte XOR key that produces the best looking histogram is the repeating-key XOR key byte for that block. Put them together and you have the key._
+
+### Challenge 7: AES in ECB mode
+
+_The Base64-encoded content [in this file](https://github.com/jeffrade/cryptopals/blob/master/challenge-data/7.txt) has been encrypted via AES-128 in ECB mode under the key_
+```
+"YELLOW SUBMARINE".
+```
+_(case-sensitive, without the quotes; exactly 16 characters; I like "YELLOW SUBMARINE" because it's exactly 16 bytes long, and now you do too)._
+
+_Decrypt it. You know the key, after all._
+
+_Easiest way: use OpenSSL::Cipher and give it AES-128-ECB as the cipher._
