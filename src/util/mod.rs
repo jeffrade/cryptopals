@@ -1,4 +1,6 @@
 use std::cmp::Ordering;
+use std::fs::File;
+use std::io::{prelude::*, BufReader, Lines};
 
 pub fn hex_xor(hex_1: &str, hex_2: &str) -> String {
     let bits_1: Vec<u8> = hex_to_bits(hex_1);
@@ -694,6 +696,12 @@ fn b64_to_six_bits(c: char) -> [u8; 6] {
     } else {
         panic!("Received a char I cannot handle: {:?}", c)
     }
+}
+
+pub fn get_file_lines(file: &str) -> Lines<BufReader<File>> {
+    let file = File::open(file).unwrap_or_else(|err| panic!("Could not get file {}: {:?}", file, err));
+    let reader = BufReader::new(file);
+    reader.lines()
 }
 
 #[cfg(test)]

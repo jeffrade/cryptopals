@@ -1,15 +1,11 @@
-use std::fs::File;
-use std::io::{prelude::*, BufReader};
 use std::slice::ChunksExact;
 
 use crate::util::*;
 
 pub fn start() {
     println!("Starting Set 1, Challenge 6...");
-    let file = File::open("challenge-data/6.txt").unwrap();
-    let reader = BufReader::new(file);
     let mut ciphertext = Vec::<u8>::new();
-    for line in reader.lines() {
+    for line in get_file_lines("challenge-data/6.txt") {
         ciphertext.append(&mut hex_to_bytes(&base64_to_hex(&line.unwrap())));
     }
 
