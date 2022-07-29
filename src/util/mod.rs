@@ -699,7 +699,8 @@ fn b64_to_six_bits(c: char) -> [u8; 6] {
 }
 
 pub fn get_file_lines(file: &str) -> Lines<BufReader<File>> {
-    let file = File::open(file).unwrap_or_else(|err| panic!("Could not get file {}: {:?}", file, err));
+    let file =
+        File::open(file).unwrap_or_else(|err| panic!("Could not get file {}: {:?}", file, err));
     let reader = BufReader::new(file);
     reader.lines()
 }
