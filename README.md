@@ -118,3 +118,13 @@ _(case-sensitive, without the quotes; exactly 16 characters; I like "YELLOW SUBM
 _Decrypt it. You know the key, after all._
 
 _Easiest way: use OpenSSL::Cipher and give it AES-128-ECB as the cipher._
+
+### Challenge 8: Detect AES in ECB mode
+
+_[In this file](https://raw.githubusercontent.com/jeffrade/cryptopals/master/challenge-data/8.txt) are a bunch of hex-encoded ciphertexts._
+
+_One of them has been encrypted with ECB._
+
+_Detect it._
+
+_Remember that the problem with ECB is that it is stateless and deterministic; the same 16 byte plaintext block will always produce the same 16 byte ciphertext._
