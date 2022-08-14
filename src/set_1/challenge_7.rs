@@ -10,13 +10,8 @@ pub fn start() {
         ciphertext.append(&mut hex_to_bytes(&base64_to_hex(&line.unwrap())));
     }
 
-    let chunks: usize = ciphertext.len() / 16;
-    for index in 0..chunks {
-        let start: usize = index * 16;
-        let end: usize = start + 16;
-        let plaintext_bytes = aes128_ecb_decrypt(&ciphertext[start..end], key);
-        println!("{:?}", String::from_utf8_lossy(&plaintext_bytes));
-    }
+    let plaintext_bytes = aes128_decrypt(&ciphertext, key, AesMode::ECB);
+    println!("{:?}", String::from_utf8_lossy(&plaintext_bytes));
 
     println!("Done!")
 }

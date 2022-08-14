@@ -1,8 +1,13 @@
 #![allow(non_upper_case_globals)]
 #![allow(non_snake_case)]
 #![allow(clippy::identity_op)]
-/***
- *** The aes128_ecb_decrypt function implementation is taken from https://github.com/kokke/tiny-AES-c */
+#![allow(clippy::upper_case_acronyms)]
+/* The aes128_ecb_decrypt function implementation is taken from https://github.com/kokke/tiny-AES-c */
+
+pub enum AesMode {
+    ECB,
+    CBC,
+}
 
 // The number of columns comprising a state in AES. This is a constant in AES. Value=4
 const Nb: usize = 4;
@@ -13,11 +18,28 @@ const Rcon: [u8; 11] = [
     0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36,
 ];
 
-pub fn aes128_ecb_decrypt(ciphertext: &[u8], key: &[u8]) -> Vec<u8> {
-    if ciphertext.len() % 16 != 0 {
-        panic!("Must supply ciphertext with size multiple of 16!");
+pub fn aes128_decrypt(ciphertext: &[u8], key: &[u8], mode: AesMode) -> Vec<u8> {
+    match mode {
+        AesMode::ECB => {
+            if ciphertext.len() % 16 != 0 {
+                panic!("Must supply ciphertext with size multiple of 16!");
+            }
+            let chunks: usize = ciphertext.len() / 16;
+            let mut plaintext_bytes: Vec<u8> = Vec::new();
+            for index in 0..chunks {
+                let start: usize = index * 16;
+                let end: usize = start + 16;
+                plaintext_bytes.append(&mut aes128_ecb_decrypt(&ciphertext[start..end], key));
+            }
+            plaintext_bytes
+        }
+        AesMode::CBC => {
+            panic!("AES CBC mode not yet implemented!");
+        }
     }
+}
 
+fn aes128_ecb_decrypt(ciphertext: &[u8], key: &[u8]) -> Vec<u8> {
     let RoundKey = KeyExpansion(key);
 
     let mut round: usize = 10;
