@@ -4,6 +4,8 @@
 #![allow(clippy::upper_case_acronyms)]
 /* The aes128_ecb_decrypt function implementation is taken from https://github.com/kokke/tiny-AES-c */
 
+pub mod util;
+
 pub enum AesMode {
     ECB,
     CBC,
