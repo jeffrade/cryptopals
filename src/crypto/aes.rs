@@ -95,8 +95,14 @@ pub fn ecb_128_decrypt(ciphertext: &[u8], key: &[u8]) -> Vec<u8> {
 
 // This function produces Nb(Nr+1) round keys. The round keys are used in each round to decrypt the states.
 fn KeyExpansion(Key: &[u8], Nk: usize, Nr: usize) -> Vec<u8> {
-    // https://github.com/kokke/tiny-AES-c/blob/12e7744b4919e9d55de75b7ab566326a1c8e7a67/aes.h#L41
-    let mut RoundKey: Vec<u8> = vec![0; 176];
+    // https://github.com/kokke/tiny-AES-c/blob/12e7744b4919e9d55de75b7ab566326a1c8e7a67/aes.h#L33-L42
+    let mut key_exp_size = 176;
+    if Nk == 6 {
+        key_exp_size = 208;
+    } else if Nk == 8 {
+        key_exp_size = 240;
+    }
+    let mut RoundKey: Vec<u8> = vec![0; key_exp_size];
     let mut tempa: [u8; 4] = [0; 4]; // Used for the column/row operations
 
     // The first round key is the key itself.
