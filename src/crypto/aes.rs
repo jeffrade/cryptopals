@@ -1,7 +1,7 @@
 #![allow(non_upper_case_globals)]
 #![allow(non_snake_case)]
 #![allow(clippy::identity_op)]
-/* The aes128_ecb_decrypt function implementation is taken from https://github.com/kokke/tiny-AES-c */
+/* The ecb_128_[encrypt|decrypt] function implementations are taken from https://github.com/kokke/tiny-AES-c */
 
 // The number of columns comprising a state in AES. This is a constant in AES. Value=4
 const Nb: usize = 4;
@@ -49,6 +49,52 @@ const rsbox: [u8; 256] = [
     0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61,
     0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d,
 ];
+
+pub fn ecb_128_encrypt(plaintext: &[u8], key: &[u8]) -> Vec<u8> {
+    let Nk: usize = 4; // The number of 32 bit words in a 128 bit key.
+    let Nr: usize = 10; // The number of rounds in AES Cipher.
+    let RoundKey = KeyExpansion(key, Nk, Nr);
+
+    let mut round: usize = 0;
+
+    // state - array holding the intermediate results during decryption.
+    let mut state: [[u8; 4]; 4] = [[0; 4]; 4];
+    for i in [0, 1, 2, 3] {
+        for j in [0, 1, 2, 3] {
+            state[i][j] = plaintext[i * 4 + j];
+        }
+    }
+
+    // Add the First round key to the state before starting the rounds.
+    state = AddRoundKey(round, state, &RoundKey);
+    round += 1;
+
+    // There will be Nr rounds.
+    // The first Nr-1 rounds are identical.
+    // These Nr rounds are executed in the loop below.
+    // Last one without MixColumns()
+    loop {
+        state = SubBytes(state);
+        state = ShiftRows(state);
+        if round == Nr {
+            break;
+        }
+        state = MixColumns(state);
+        state = AddRoundKey(round, state, &RoundKey);
+        round += 1;
+    }
+
+    // Add round key to last round
+    state = AddRoundKey(Nr, state, &RoundKey);
+
+    let mut ciphertext: Vec<u8> = vec![];
+    for i in [0, 1, 2, 3] {
+        for j in [0, 1, 2, 3] {
+            ciphertext.push(state[i][j]);
+        }
+    }
+    ciphertext
+}
 
 pub fn ecb_128_decrypt(ciphertext: &[u8], key: &[u8]) -> Vec<u8> {
     let Nk: usize = 4; // The number of 32 bit words in a 128 bit key.
@@ -203,10 +249,50 @@ fn InvShiftRows(mut state: [[u8; 4]; 4]) -> [[u8; 4]; 4] {
     state
 }
 
+// The ShiftRows() function shifts the rows in the state to the left.
+// Each row is shifted with different offset.
+// Offset = Row number. So the first row is not shifted.
+fn ShiftRows(mut state: [[u8; 4]; 4]) -> [[u8; 4]; 4] {
+    // Rotate first row 1 columns to left
+    let mut temp: u8 = state[0][1];
+    state[0][1] = state[1][1];
+    state[1][1] = state[2][1];
+    state[2][1] = state[3][1];
+    state[3][1] = temp;
+
+    // Rotate second row 2 columns to left
+    temp = state[0][2];
+    state[0][2] = state[2][2];
+    state[2][2] = temp;
+
+    temp = state[1][2];
+    state[1][2] = state[3][2];
+    state[3][2] = temp;
+
+    // Rotate third row 3 columns to left
+    temp = state[0][3];
+    state[0][3] = state[3][3];
+    state[3][3] = state[2][3];
+    state[2][3] = state[1][3];
+    state[1][3] = temp;
+    state
+}
+
 fn InvSubBytes(mut state: [[u8; 4]; 4]) -> [[u8; 4]; 4] {
     for i in [0, 1, 2, 3] {
         for j in [0, 1, 2, 3] {
             state[j][i] = getSBoxInvert(state[j][i] as usize);
+        }
+    }
+    state
+}
+
+// The SubBytes Function Substitutes the values in the
+// state matrix with values in an S-box.
+fn SubBytes(mut state: [[u8; 4]; 4]) -> [[u8; 4]; 4] {
+    for i in [0, 1, 2, 3] {
+        for j in [0, 1, 2, 3] {
+            state[j][i] = getSBoxValue(state[j][i] as usize);
         }
     }
     state
@@ -229,6 +315,27 @@ fn InvMixColumns(mut state: [[u8; 4]; 4]) -> [[u8; 4]; 4] {
         state[i][3] = Multiply(a, 0x0b) ^ Multiply(b, 0x0d) ^ Multiply(c, 0x09) ^ Multiply(d, 0x0e);
     }
 
+    state
+}
+
+// MixColumns function mixes the columns of the state matrix
+fn MixColumns(mut state: [[u8; 4]; 4]) -> [[u8; 4]; 4] {
+    for i in [0, 1, 2, 3] {
+        let t = state[i][0];
+        let Tmp = state[i][0] ^ state[i][1] ^ state[i][2] ^ state[i][3];
+        let mut Tm = state[i][0] ^ state[i][1];
+        Tm = xtime(Tm);
+        state[i][0] ^= Tm ^ Tmp;
+        Tm = state[i][1] ^ state[i][2];
+        Tm = xtime(Tm);
+        state[i][1] ^= Tm ^ Tmp;
+        Tm = state[i][2] ^ state[i][3];
+        Tm = xtime(Tm);
+        state[i][2] ^= Tm ^ Tmp;
+        Tm = state[i][3] ^ t;
+        Tm = xtime(Tm);
+        state[i][3] ^= Tm ^ Tmp;
+    }
     state
 }
 
