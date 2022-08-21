@@ -12,7 +12,7 @@ pub fn start() {
 
     let last_block = plaintext_blocks.pop().unwrap();
     let padded_block = add_pkcs7_padding(last_block, 20);
-    
+
     plaintext_blocks.push(&padded_block);
     assert_eq!(plaintext_blocks, expected_blocks,);
 }
