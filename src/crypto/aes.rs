@@ -51,7 +51,8 @@ const rsbox: [u8; 256] = [
 ];
 
 pub fn ecb_128_decrypt(ciphertext: &[u8], key: &[u8]) -> Vec<u8> {
-    let RoundKey = KeyExpansion(key);
+    let Nk = 4; // The number of 32 bit words in a 128 bit key.
+    let RoundKey = KeyExpansion(key, Nk);
 
     let mut round: usize = 10;
 
@@ -91,13 +92,13 @@ pub fn ecb_128_decrypt(ciphertext: &[u8], key: &[u8]) -> Vec<u8> {
     plaintext
 }
 
-fn KeyExpansion(Key: &[u8]) -> Vec<u8> {
+fn KeyExpansion(Key: &[u8], Nk: usize) -> Vec<u8> {
     // https://github.com/kokke/tiny-AES-c/blob/12e7744b4919e9d55de75b7ab566326a1c8e7a67/aes.h#L41
     let mut RoundKey: Vec<u8> = vec![0; 176];
     let mut tempa: [u8; 4] = [0; 4]; // Used for the column/row operations
 
     // The first round key is the key itself.
-    for i in [0, 1, 2, 3] {
+    for i in 0..Nk {
         RoundKey[(i * 4) + 0] = Key[(i * 4) + 0];
         RoundKey[(i * 4) + 1] = Key[(i * 4) + 1];
         RoundKey[(i * 4) + 2] = Key[(i * 4) + 2];
@@ -105,7 +106,7 @@ fn KeyExpansion(Key: &[u8]) -> Vec<u8> {
     }
 
     // All other round keys are found from the previous round keys.
-    let mut i = 4;
+    let mut i = Nk;
     while i < Nb * (10 + 1) {
         let mut k = (i - 1) * 4;
         tempa[0] = RoundKey[k + 0];
@@ -113,7 +114,7 @@ fn KeyExpansion(Key: &[u8]) -> Vec<u8> {
         tempa[2] = RoundKey[k + 2];
         tempa[3] = RoundKey[k + 3];
 
-        if i % 4 == 0 {
+        if i % Nk == 0 {
             // This function shifts the 4 bytes in a word to the left once.
             // [a0,a1,a2,a3] becomes [a1,a2,a3,a0]
 
@@ -133,15 +134,20 @@ fn KeyExpansion(Key: &[u8]) -> Vec<u8> {
             tempa[2] = getSBoxValue(tempa[2] as usize);
             tempa[3] = getSBoxValue(tempa[3] as usize);
 
-            tempa[0] ^= Rcon[i / 4];
+            tempa[0] ^= Rcon[i / Nk];
+        }
+
+        if Nk > 4 {
+            // TODO https://github.com/kokke/tiny-AES-c/blob/master/aes.c#L200_L209
         }
 
         let j = i * 4;
-        k = (i - 4) * 4;
+        k = (i - Nk) * 4;
         RoundKey[j + 0] = RoundKey[k + 0] ^ tempa[0];
         RoundKey[j + 1] = RoundKey[k + 1] ^ tempa[1];
         RoundKey[j + 2] = RoundKey[k + 2] ^ tempa[2];
         RoundKey[j + 3] = RoundKey[k + 3] ^ tempa[3];
+
         i += 1;
     }
     RoundKey
