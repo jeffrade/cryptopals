@@ -147,6 +147,7 @@ fn KeyExpansion(Key: &[u8], Nk: usize, Nr: usize) -> Vec<u8> {
 
         if Nk > 4 {
             // TODO https://github.com/kokke/tiny-AES-c/blob/master/aes.c#L200_L209
+            panic!("Need to implement for AES 192 and 256");
         }
 
         let j = i * 4;
