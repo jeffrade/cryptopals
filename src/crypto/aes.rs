@@ -51,10 +51,11 @@ const rsbox: [u8; 256] = [
 ];
 
 pub fn ecb_128_decrypt(ciphertext: &[u8], key: &[u8]) -> Vec<u8> {
-    let Nk = 4; // The number of 32 bit words in a 128 bit key.
-    let RoundKey = KeyExpansion(key, Nk);
+    let Nk: usize = 4; // The number of 32 bit words in a 128 bit key.
+    let Nr: usize = 10; // The number of rounds in AES Cipher.
+    let RoundKey = KeyExpansion(key, Nk, Nr);
 
-    let mut round: usize = 10;
+    let mut round: usize = Nr;
 
     // state - array holding the intermediate results during decryption.
     let mut state: [[u8; 4]; 4] = [[0; 4]; 4];
@@ -68,9 +69,9 @@ pub fn ecb_128_decrypt(ciphertext: &[u8], key: &[u8]) -> Vec<u8> {
     state = AddRoundKey(round, state, &RoundKey);
     round -= 1;
 
-    // There will be 10 rounds.
-    // The first 9 rounds are identical.
-    // These 10 rounds are executed in the loop below.
+    // There will be Nr rounds.
+    // The first Nr-1 rounds are identical.
+    // These Nr rounds are executed in the loop below.
     // Last one without InvMixColumn()
     loop {
         state = InvShiftRows(state);
@@ -92,7 +93,8 @@ pub fn ecb_128_decrypt(ciphertext: &[u8], key: &[u8]) -> Vec<u8> {
     plaintext
 }
 
-fn KeyExpansion(Key: &[u8], Nk: usize) -> Vec<u8> {
+// This function produces Nb(Nr+1) round keys. The round keys are used in each round to decrypt the states.
+fn KeyExpansion(Key: &[u8], Nk: usize, Nr: usize) -> Vec<u8> {
     // https://github.com/kokke/tiny-AES-c/blob/12e7744b4919e9d55de75b7ab566326a1c8e7a67/aes.h#L41
     let mut RoundKey: Vec<u8> = vec![0; 176];
     let mut tempa: [u8; 4] = [0; 4]; // Used for the column/row operations
@@ -107,7 +109,7 @@ fn KeyExpansion(Key: &[u8], Nk: usize) -> Vec<u8> {
 
     // All other round keys are found from the previous round keys.
     let mut i = Nk;
-    while i < Nb * (10 + 1) {
+    while i < Nb * (Nr + 1) {
         let mut k = (i - 1) * 4;
         tempa[0] = RoundKey[k + 0];
         tempa[1] = RoundKey[k + 1];
