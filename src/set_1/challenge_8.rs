@@ -2,7 +2,6 @@ use crate::util::*;
 
 pub fn start() {
     println!("Starting Set 1, Challenge 8...");
-
     let mut line_num = 1;
     for line in get_file_lines("challenge-data/8.txt") {
         let ciphertext_hex = line.unwrap();

@@ -8,46 +8,54 @@ pub enum AesMode {
     CBC,
 }
 
-pub fn aes128_decrypt(ciphertext: &[u8], key: &[u8], mode: AesMode) -> Vec<u8> {
-    match mode {
-        AesMode::ECB => {
-            if ciphertext.len() % 16 != 0 {
-                panic!("Must supply ciphertext with size multiple of 16!");
-            }
-            let chunks: usize = ciphertext.len() / 16;
-            let mut plaintext_bytes: Vec<u8> = Vec::new();
-            for index in 0..chunks {
-                let start: usize = index * 16;
-                let end: usize = start + 16;
+pub fn aes128_decrypt(ciphertext: &[u8], key: &[u8], iv: Option<&[u8]>, mode: AesMode) -> Vec<u8> {
+    if ciphertext.len() % 16 != 0 {
+        panic!("Must supply ciphertext with size multiple of 16!");
+    }
+    let chunks: usize = ciphertext.len() / 16;
+    let mut plaintext_bytes: Vec<u8> = Vec::new();
+    for index in 0..chunks {
+        let start: usize = index * 16;
+        let end: usize = start + 16;
+        match mode {
+            AesMode::ECB => {
                 plaintext_bytes.append(&mut aes::ecb_128_decrypt(&ciphertext[start..end], key));
             }
-            plaintext_bytes
-        }
-        AesMode::CBC => {
-            panic!("AES CBC mode not yet implemented!");
+            AesMode::CBC => {
+                plaintext_bytes.append(&mut aes::cbc_128_decrypt(
+                    &ciphertext[start..end],
+                    key,
+                    iv.unwrap(),
+                ));
+            }
         }
     }
+    plaintext_bytes
 }
 
-pub fn aes128_encrypt(plaintext: &[u8], key: &[u8], mode: AesMode) -> Vec<u8> {
-    match mode {
-        AesMode::ECB => {
-            if plaintext.len() % 16 != 0 {
-                panic!("Must supply ciphertext with size multiple of 16!");
-            }
-            let chunks: usize = plaintext.len() / 16;
-            let mut ciphertext_bytes: Vec<u8> = Vec::new();
-            for index in 0..chunks {
-                let start: usize = index * 16;
-                let end: usize = start + 16;
+pub fn aes128_encrypt(plaintext: &[u8], key: &[u8], iv: Option<&[u8]>, mode: AesMode) -> Vec<u8> {
+    if plaintext.len() % 16 != 0 {
+        panic!("Must supply ciphertext with size multiple of 16!");
+    }
+    let chunks: usize = plaintext.len() / 16;
+    let mut ciphertext_bytes: Vec<u8> = Vec::new();
+    for index in 0..chunks {
+        let start: usize = index * 16;
+        let end: usize = start + 16;
+        match mode {
+            AesMode::ECB => {
                 ciphertext_bytes.append(&mut aes::ecb_128_encrypt(&plaintext[start..end], key));
             }
-            ciphertext_bytes
-        }
-        AesMode::CBC => {
-            panic!("AES CBC mode not yet implemented!");
+            AesMode::CBC => {
+                ciphertext_bytes.append(&mut aes::cbc_128_encrypt(
+                    &plaintext[start..end],
+                    key,
+                    iv.unwrap(),
+                ));
+            }
         }
     }
+    ciphertext_bytes
 }
 
 #[cfg(test)]
@@ -84,12 +92,14 @@ mod tests {
         ];
         let plaintext = &[
             0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x40, 0x9f, 0x96, 0xe9, 0x3d, 0x7e, 0x11, 0x73, 0x93,
-            0x17, 0x2a, 0xae, 0x2d, 0x8a, 0x57, 0x1e, 0x03, 0xac, 0x9c, 0x9e, 0xb7, 0x6f, 0xac, 0x45, 0xaf, 0x8e, 0x51
+            0x17, 0x2a, 0xae, 0x2d, 0x8a, 0x57, 0x1e, 0x03, 0xac, 0x9c, 0x9e, 0xb7, 0x6f, 0xac,
+            0x45, 0xaf, 0x8e, 0x51,
         ];
         let expected = &[
             0x3a, 0xd7, 0x7b, 0xb4, 0x0d, 0x7a, 0x36, 0x60, 0xa8, 0x9e, 0xca, 0xf3, 0x24, 0x66,
-            0xef, 0x97, 0xf5, 0xd3, 0xd5, 0x85, 0x03, 0xb9, 0x69, 0x9d, 0xe7, 0x85, 0x89, 0x5a, 0x96, 0xfd, 0xba, 0xaf
+            0xef, 0x97, 0xf5, 0xd3, 0xd5, 0x85, 0x03, 0xb9, 0x69, 0x9d, 0xe7, 0x85, 0x89, 0x5a,
+            0x96, 0xfd, 0xba, 0xaf,
         ];
-        assert_eq!(aes128_encrypt(plaintext, key, AesMode::ECB), expected);
+        assert_eq!(aes128_encrypt(plaintext, key, None, AesMode::ECB), expected);
     }
 }

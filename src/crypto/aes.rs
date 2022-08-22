@@ -51,19 +51,39 @@ const rsbox: [u8; 256] = [
 ];
 
 pub fn ecb_128_encrypt(plaintext: &[u8], key: &[u8]) -> Vec<u8> {
+    // state - array holding the intermediate results during decryption.
+    let mut state: [[u8; 4]; 4] = init_state(plaintext);
+
     let Nk: usize = 4; // The number of 32 bit words in a 128 bit key.
     let Nr: usize = 10; // The number of rounds in AES Cipher.
-    let RoundKey = KeyExpansion(key, Nk, Nr);
 
-    let mut round: usize = 0;
+    state = Cipher(key, state, Nk, Nr);
 
+    flatten_state(state)
+}
+
+pub fn ecb_128_decrypt(ciphertext: &[u8], key: &[u8]) -> Vec<u8> {
     // state - array holding the intermediate results during decryption.
-    let mut state: [[u8; 4]; 4] = [[0; 4]; 4];
-    for i in [0, 1, 2, 3] {
-        for j in [0, 1, 2, 3] {
-            state[i][j] = plaintext[i * 4 + j];
-        }
-    }
+    let mut state: [[u8; 4]; 4] = init_state(ciphertext);
+
+    let Nk: usize = 4; // The number of 32 bit words in a 128 bit key.
+    let Nr: usize = 10; // The number of rounds in AES Cipher.
+    state = InvCipher(key, state, Nk, Nr);
+
+    flatten_state(state)
+}
+
+pub fn cbc_128_encrypt(plaintext: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
+    vec![] // TODO
+}
+
+pub fn cbc_128_decrypt(ciphertext: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
+    vec![] // TODO
+}
+
+fn Cipher(key: &[u8], mut state: [[u8; 4]; 4], Nk: usize, Nr: usize) -> [[u8; 4]; 4] {
+    let RoundKey = KeyExpansion(key, Nk, Nr);
+    let mut round: usize = 0;
 
     // Add the First round key to the state before starting the rounds.
     state = AddRoundKey(round, state, &RoundKey);
@@ -85,31 +105,12 @@ pub fn ecb_128_encrypt(plaintext: &[u8], key: &[u8]) -> Vec<u8> {
     }
 
     // Add round key to last round
-    state = AddRoundKey(Nr, state, &RoundKey);
-
-    let mut ciphertext: Vec<u8> = vec![];
-    for i in [0, 1, 2, 3] {
-        for j in [0, 1, 2, 3] {
-            ciphertext.push(state[i][j]);
-        }
-    }
-    ciphertext
+    AddRoundKey(Nr, state, &RoundKey)
 }
 
-pub fn ecb_128_decrypt(ciphertext: &[u8], key: &[u8]) -> Vec<u8> {
-    let Nk: usize = 4; // The number of 32 bit words in a 128 bit key.
-    let Nr: usize = 10; // The number of rounds in AES Cipher.
+fn InvCipher(key: &[u8], mut state: [[u8; 4]; 4], Nk: usize, Nr: usize) -> [[u8; 4]; 4] {
     let RoundKey = KeyExpansion(key, Nk, Nr);
-
     let mut round: usize = Nr;
-
-    // state - array holding the intermediate results during decryption.
-    let mut state: [[u8; 4]; 4] = [[0; 4]; 4];
-    for i in [0, 1, 2, 3] {
-        for j in [0, 1, 2, 3] {
-            state[i][j] = ciphertext[i * 4 + j];
-        }
-    }
 
     // Add the First round key to the state before starting the rounds.
     state = AddRoundKey(round, state, &RoundKey);
@@ -129,14 +130,7 @@ pub fn ecb_128_decrypt(ciphertext: &[u8], key: &[u8]) -> Vec<u8> {
         state = InvMixColumns(state);
         round -= 1;
     }
-
-    let mut plaintext: Vec<u8> = vec![];
-    for i in [0, 1, 2, 3] {
-        for j in [0, 1, 2, 3] {
-            plaintext.push(state[i][j]);
-        }
-    }
-    plaintext
+    state
 }
 
 // This function produces Nb(Nr+1) round keys. The round keys are used in each round to decrypt the states.
@@ -349,4 +343,24 @@ fn Multiply(x: u8, y: u8) -> u8 {
 
 fn xtime(x: u8) -> u8 {
     (x << 1) ^ (((x >> 7) & 1) * 0x1b)
+}
+
+fn init_state(text: &[u8]) -> [[u8; 4]; 4] {
+    let mut state: [[u8; 4]; 4] = [[0; 4]; 4];
+    for i in [0, 1, 2, 3] {
+        for j in [0, 1, 2, 3] {
+            state[i][j] = text[i * 4 + j];
+        }
+    }
+    state
+}
+
+fn flatten_state(state: [[u8; 4]; 4]) -> Vec<u8> {
+    let mut text: Vec<u8> = vec![];
+    for i in [0, 1, 2, 3] {
+        for j in [0, 1, 2, 3] {
+            text.push(state[i][j]);
+        }
+    }
+    text
 }

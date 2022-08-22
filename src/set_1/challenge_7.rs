@@ -10,7 +10,7 @@ pub fn start() {
         ciphertext.append(&mut hex_to_bytes(&base64_to_hex(&line.unwrap())));
     }
 
-    let plaintext_bytes = aes128_decrypt(&ciphertext, key, AesMode::ECB);
+    let plaintext_bytes = aes128_decrypt(&ciphertext, key, None, AesMode::ECB);
     println!("{:?}", String::from_utf8_lossy(&plaintext_bytes));
 
     println!("Done!")

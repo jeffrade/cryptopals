@@ -1,6 +1,8 @@
 use crate::crypto::util::*;
 
 pub fn start() {
+    println!("Starting Set 1, Challenge 9...");
+
     let mut plaintext_blocks: Vec<&[u8]> = vec![
         "A TWENTY BYTE BLOCK!".as_bytes(),
         "YELLOW SUBMARINE".as_bytes(),
@@ -15,4 +17,6 @@ pub fn start() {
 
     plaintext_blocks.push(&padded_block);
     assert_eq!(plaintext_blocks, expected_blocks,);
+
+    println!("Done!")
 }
