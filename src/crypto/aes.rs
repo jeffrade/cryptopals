@@ -1,7 +1,11 @@
 #![allow(non_upper_case_globals)]
 #![allow(non_snake_case)]
 #![allow(clippy::identity_op)]
-/* The ecb_128_[encrypt|decrypt] function implementations are taken from https://github.com/kokke/tiny-AES-c */
+/* The [cbc|ecb]_128_[encrypt|decrypt] function implementations are taken from https://github.com/kokke/tiny-AES-c */
+
+use crate::util::bytes_xor;
+
+const AES_BLOCKLEN: usize = 16;
 
 // The number of columns comprising a state in AES. This is a constant in AES. Value=4
 const Nb: usize = 4;
@@ -51,34 +55,72 @@ const rsbox: [u8; 256] = [
 ];
 
 pub fn ecb_128_encrypt(plaintext: &[u8], key: &[u8]) -> Vec<u8> {
-    // state - array holding the intermediate results during decryption.
-    let mut state: [[u8; 4]; 4] = init_state(plaintext);
-
     let Nk: usize = 4; // The number of 32 bit words in a 128 bit key.
     let Nr: usize = 10; // The number of rounds in AES Cipher.
-
-    state = Cipher(key, state, Nk, Nr);
-
-    flatten_state(state)
+    let chunks: usize = plaintext.len() / AES_BLOCKLEN;
+    let mut ciphertext_bytes: Vec<u8> = Vec::new();
+    for index in 0..chunks {
+        let start: usize = index * AES_BLOCKLEN;
+        let end: usize = start + AES_BLOCKLEN;
+        // state - array holding the intermediate results during decryption.
+        let mut state: [[u8; 4]; 4] = init_state(&plaintext[start..end]);
+        state = Cipher(key, state, Nk, Nr);
+        ciphertext_bytes.append(&mut flatten_state(state))
+    }
+    ciphertext_bytes
 }
 
 pub fn ecb_128_decrypt(ciphertext: &[u8], key: &[u8]) -> Vec<u8> {
-    // state - array holding the intermediate results during decryption.
-    let mut state: [[u8; 4]; 4] = init_state(ciphertext);
-
     let Nk: usize = 4; // The number of 32 bit words in a 128 bit key.
     let Nr: usize = 10; // The number of rounds in AES Cipher.
-    state = InvCipher(key, state, Nk, Nr);
-
-    flatten_state(state)
+    let chunks: usize = ciphertext.len() / AES_BLOCKLEN;
+    let mut plaintext_bytes: Vec<u8> = Vec::new();
+    for index in 0..chunks {
+        let start: usize = index * AES_BLOCKLEN;
+        let end: usize = start + AES_BLOCKLEN;
+        // state - array holding the intermediate results during decryption.
+        let mut state: [[u8; 4]; 4] = init_state(&ciphertext[start..end]);
+        state = InvCipher(key, state, Nk, Nr);
+        plaintext_bytes.append(&mut flatten_state(state));
+    }
+    plaintext_bytes
 }
 
-pub fn cbc_128_encrypt(plaintext: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
-    vec![] // TODO
+pub fn cbc_128_encrypt(buf: &[u8], key: &[u8], mut Iv: Vec<u8>) -> Vec<u8> {
+    let Nk: usize = 4; // The number of 32 bit words in a 128 bit key.
+    let Nr: usize = 10; // The number of rounds in AES Cipher.
+    let chunks: usize = buf.len() / AES_BLOCKLEN;
+    let mut ciphertext_bytes: Vec<u8> = Vec::new();
+    for index in 0..chunks {
+        let start: usize = index * AES_BLOCKLEN;
+        let end: usize = start + AES_BLOCKLEN;
+        let temp = XorWithIv(&buf[start..end], &Iv);
+        // state - array holding the intermediate results during decryption.
+        let mut state: [[u8; 4]; 4] = init_state(&temp);
+        state = Cipher(key, state, Nk, Nr);
+        ciphertext_bytes.append(&mut flatten_state(state));
+        Iv.copy_from_slice(&flatten_state(state));
+    }
+    ciphertext_bytes
 }
 
-pub fn cbc_128_decrypt(ciphertext: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
-    vec![] // TODO
+pub fn cbc_128_decrypt(buf: &[u8], key: &[u8], mut Iv: Vec<u8>) -> Vec<u8> {
+    let Nk: usize = 4; // The number of 32 bit words in a 128 bit key.
+    let Nr: usize = 10; // The number of rounds in AES Cipher.
+    let mut storeNextIv = vec![0; AES_BLOCKLEN];
+    let chunks: usize = buf.len() / AES_BLOCKLEN;
+    let mut plaintext_bytes: Vec<u8> = Vec::new();
+    for index in 0..chunks {
+        let start: usize = index * AES_BLOCKLEN;
+        let end: usize = start + AES_BLOCKLEN;
+        // state - array holding the intermediate results during decryption.
+        let mut state: [[u8; 4]; 4] = init_state(&buf[start..end]);
+        storeNextIv.copy_from_slice(&buf[start..end]);
+        state = InvCipher(key, state, Nk, Nr);
+        plaintext_bytes.append(&mut XorWithIv(&flatten_state(state), &Iv));
+        Iv.copy_from_slice(&storeNextIv);
+    }
+    plaintext_bytes
 }
 
 fn Cipher(key: &[u8], mut state: [[u8; 4]; 4], Nk: usize, Nr: usize) -> [[u8; 4]; 4] {
@@ -343,6 +385,10 @@ fn Multiply(x: u8, y: u8) -> u8 {
 
 fn xtime(x: u8) -> u8 {
     (x << 1) ^ (((x >> 7) & 1) * 0x1b)
+}
+
+fn XorWithIv(buf: &[u8], Iv: &[u8]) -> Vec<u8> {
+    bytes_xor(buf, Iv)
 }
 
 fn init_state(text: &[u8]) -> [[u8; 4]; 4] {
